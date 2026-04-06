@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LabHub - Research & Inventory dashboard</title>
+  <link rel="stylesheet" href="styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <div class="app-container">
+    <aside class="sidebar">
+      <div class="logo">
+        <i class="fa-solid fa-flask"></i>
+        <span>LabHub</span>
+      </div>
+      <nav class="nav-menu">
+        <a href="#" class="nav-item active"><i class="fa-solid fa-chart-pie"></i> 대시보드</a>
+        <a href="#" class="nav-item"><i class="fa-solid fa-book-journal-whills"></i> 연구노트 (ELN)</a>
+        <a href="#" class="nav-item"><i class="fa-solid fa-vials"></i> 시약 관리 (LIMS)</a>
+        <a href="#" class="nav-item"><i class="fa-solid fa-users"></i> 연구실 멤버</a>
+      </nav>
+      <div class="bottom-menu">
+        <a href="#" class="nav-item"><i class="fa-solid fa-gear"></i> 시스템 설정</a>
+      </div>
+    </aside>
+    
+    <main class="main-content">
+      <header class="top-header">
+        <div class="search-bar">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input type="text" placeholder="노트 기록, 시약명, 또는 프로토콜 검색...">
+        </div>
+        <div class="user-profile">
+          <div class="notification-icon">
+            <i class="fa-regular fa-bell"></i>
+            <span class="badge">3</span>
+          </div>
+          <img src="https://ui-avatars.com/api/?name=Senior+Dev&background=0D8ABC&color=fff" alt="User">
+        </div>
+      </header>
+
+      <div class="dashboard-content">
+        <h1 class="page-title">안녕하세요, Senior Dev 연구원님</h1>
+        
+        <div class="kpi-cards">
+          <div class="kpi-card">
+            <div class="kpi-icon blue"><i class="fa-solid fa-book-open"></i></div>
+            <div class="kpi-info">
+              <h3>작성 중인 노트</h3>
+              <p>4건</p>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon teal"><i class="fa-solid fa-vial-circle-check"></i></div>
+            <div class="kpi-info">
+              <h3>보유 시약 수</h3>
+              <p>1,248개</p>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon red"><i class="fa-solid fa-triangle-exclamation"></i></div>
+            <div class="kpi-info">
+              <h3>재고 부족 / 만료 임박</h3>
+              <p>5건</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-sections">
+          <section class="card recent-notes">
+            <div class="card-header">
+              <h2>최근 연구노트 기록</h2>
+              <button class="btn-primary" id="btn-new-note"><i class="fa-solid fa-plus"></i> 새 노트 작성</button>
+            </div>
+            <ul class="item-list">
+              <li>
+                <div class="item-icon"><i class="fa-regular fa-file-lines"></i></div>
+                <div class="item-details">
+                  <h4>화합물 A 합성 및 분석</h4>
+                  <span>2시간 전 수정됨 • 프로젝트: 신물질 개발</span>
+                </div>
+                <div class="item-status status-progress">작성 중</div>
+              </li>
+              <li>
+                <div class="item-icon"><i class="fa-regular fa-file-lines"></i></div>
+                <div class="item-details">
+                  <h4>세포 배양 프로토콜 갱신</h4>
+                  <span>어제 오후 4:30 승인 완료</span>
+                </div>
+                <div class="item-status status-done">승인됨</div>
+              </li>
+            </ul>
+          </section>
+
+          <section class="card inventory-alerts">
+            <div class="card-header">
+              <h2>시약 인벤토리 알림</h2>
+              <a href="#" class="view-all">전체보기</a>
+            </div>
+            <ul class="item-list">
+              <li>
+                <div class="item-icon warning"><i class="fa-solid fa-droplet"></i></div>
+                <div class="item-details">
+                  <h4>Ethanol (Absolute, 99.9%)</h4>
+                  <span>위치: 시약장 A2 • 잔량: 500mL (부족)</span>
+                </div>
+                <button class="btn-outline">주문 요청</button>
+              </li>
+              <li>
+                <div class="item-icon danger"><i class="fa-solid fa-biohazard"></i></div>
+                <div class="item-details">
+                  <h4>Sodium Hydroxide 1M</h4>
+                  <span>유효기간 만료 (2025-03-20)</span>
+                </div>
+                <button class="btn-outline">폐기 처리</button>
+              </li>
+            </ul>
+          </section>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
