@@ -4,7 +4,7 @@ import useAppStore from '../store/useAppStore';
 
 function Dashboard() {
   const navigate = useNavigate();
-  const { elnData, limsData, fetchElnData, fetchLimsData } = useAppStore();
+  const { elnData, limsData, fetchElnData, fetchLimsData, disposeReagent, orderReagent } = useAppStore();
 
   useEffect(() => {
     fetchElnData();
@@ -15,11 +15,17 @@ function Dashboard() {
     navigate('/eln');
   };
 
-  const handleAction = (action) => {
+  const handleAction = async (item, action) => {
     if (action.includes('주문')) {
-        alert('구매/발주 관리 모듈로 연동 예정입니다.');
+        if (window.confirm(`${item.name}의 구매 요청을 진행하시겠습니까?`)) {
+            await orderReagent(item.id);
+            alert('구매 요청이 완료되었습니다.');
+        }
     } else if (action.includes('폐기')) {
-        alert('안전관리 가이드에 따라 폐기 트랜잭션을 기록합니다.');
+        if (window.confirm(`${item.name}의 폐기 처리를 진행하시겠습니까?`)) {
+            await disposeReagent(item.id);
+            alert('폐기 처리가 완료되었습니다.');
+        }
     }
   };
 
@@ -106,7 +112,7 @@ function Dashboard() {
                     <h4>{item.name}</h4>
                     <span>현재 재고: {item.stockValue} {item.unit} ({item.status})</span>
                   </div>
-                  <button className="btn-outline" onClick={(e) => { e.stopPropagation(); handleAction(item.status === '부족' ? '주문' : '폐기'); }}>
+                  <button className="btn-outline" onClick={(e) => { e.stopPropagation(); handleAction(item, item.status === '부족' ? '주문' : '폐기'); }}>
                     {item.status === '부족' ? '주문 요청' : '폐기 처리'}
                   </button>
                 </li>

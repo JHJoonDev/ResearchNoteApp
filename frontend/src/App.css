@@ -570,18 +570,21 @@ body {
 }
 
 .modal-content {
-  background-color: var(--surface-color);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
   width: 100%;
   max-width: 500px;
-  border-radius: 16px;
+  border-radius: 24px;
   overflow: hidden;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  animation: modalFadeIn 0.3s ease-out;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+  animation: modalFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes modalFadeIn {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(20px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .modal-header {
@@ -752,3 +755,140 @@ body {
 }
 
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+/* ========================================= */
+/* --- ELN Editor Professional Layout --- */
+/* ========================================= */
+
+.editor-page-container {
+  display: flex;
+  height: calc(100vh - 70px);
+  background-color: white;
+}
+
+.editor-main-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  border-right: 1px solid var(--border-color);
+  padding: 2rem 4rem;
+}
+
+.editor-sidebar {
+  width: 350px;
+  background-color: #F8FAFC;
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+.editor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.editor-title-input {
+  font-size: 2.5rem;
+  font-weight: 800;
+  border: none;
+  outline: none;
+  width: 100%;
+  margin-bottom: 1rem;
+  color: var(--text-main);
+}
+
+.editor-title-input::placeholder {
+  color: #E5E7EB;
+}
+
+.editor-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background-color: white;
+  padding: 0.5rem 0;
+  margin-bottom: 1rem;
+}
+
+.editor-content-wrapper .ql-container.ql-snow {
+  border: none !important;
+  font-size: 1.1rem;
+  line-height: 1.8;
+  color: #374151;
+}
+
+.editor-content-wrapper .ql-editor {
+  padding: 0;
+  min-height: 500px;
+}
+
+.editor-content-wrapper .ql-toolbar.ql-snow {
+  border: none;
+  border-bottom: 1px solid var(--border-color);
+  padding: 0.5rem 0;
+}
+
+/* Sidebar Widgets */
+.sidebar-widget {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  margin-bottom: 1.5rem;
+  padding: 1.25rem;
+}
+
+.sidebar-widget h3 {
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.reagent-selector-mini {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.stock-indicator {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.stock-high { background: #D1FAE5; color: #065F46; }
+.stock-low { background: #FEF3C7; color: #92400E; }
+.stock-none { background: #FEE2E2; color: #991B1B; }
+
+.editor-save-btn {
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: 0 4px 6px -1px rgba(30, 58, 138, 0.2);
+  transition: all 0.2s;
+}
+
+.editor-save-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 15px -3px rgba(30, 58, 138, 0.3);
+  filter: brightness(1.1);
+}

@@ -7,6 +7,7 @@ import Layout from './components/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import ELN from './pages/ELN';
+import ELNEditor from './pages/ELNEditor';
 import LIMS from './pages/LIMS';
 import Members from './pages/Members';
 import Settings from './pages/Settings';
@@ -39,6 +40,8 @@ function App() {
         >
           <Route index element={<Dashboard />} />
           <Route path="eln" element={<ELN />} />
+          <Route path="eln/new" element={<ELNEditor />} />
+          <Route path="eln/:id" element={<ELNEditor />} />
           <Route path="lims" element={<LIMS />} />
           <Route path="members" element={<Members />} />
           <Route path="settings" element={<Settings />} />

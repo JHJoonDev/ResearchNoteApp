@@ -53,9 +53,10 @@ const useAuthStore = create((set) => ({
     const userStr = localStorage.getItem('user');
     if (token && userStr) {
       try {
-        set({ isAuthenticated: true, token, user: JSON.stringify(userStr) });
+        set({ isAuthenticated: true, token, user: JSON.parse(userStr) });
       } catch (e) {
-        // invalid JSON
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
       }
     }
   }

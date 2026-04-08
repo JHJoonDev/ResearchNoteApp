@@ -26,7 +26,18 @@ const elnNoteSchema = new mongoose.Schema({
     name: String,
     amount: Number,
     unit: String
-  }]
+  }],
+  attachments: [{
+    name: String,
+    size: Number,
+    type: String,
+    url: String,
+    uploadedAt: { type: Date, default: Date.now }
+  }],
+  isStockDeducted: {
+    type: Boolean,
+    default: false
+  }
 }, {
   timestamps: true,
 });

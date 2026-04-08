@@ -22,12 +22,26 @@ const useAppStore = create((set) => ({
     }
   },
 
+  fetchSingleNote: async (id) => {
+    set({ loading: true, error: null });
+    try {
+      const res = await api.get(`/eln/${id}`);
+      set({ loading: false });
+      return res.data;
+    } catch (err) {
+      set({ error: err.message, loading: false });
+      return null;
+    }
+  },
+
   createElnNote: async (note) => {
     try {
       const res = await api.post('/eln', note);
       set((state) => ({ elnData: [res.data, ...state.elnData] }));
+      return res.data;
     } catch (err) {
       console.error(err);
+      return null;
     }
   },
 
@@ -37,6 +51,18 @@ const useAppStore = create((set) => ({
       set((state) => ({
         elnData: state.elnData.map((note) => (note.id === id ? res.data : note)),
       }));
+    } catch (err) {
+      console.error(err);
+    }
+  },
+
+  updateElnStatus: async (id, status) => {
+    try {
+      const res = await api.put(`/eln/${id}`, { status });
+      set((state) => ({
+        elnData: state.elnData.map((note) => (note.id === id ? { ...note, status: res.data.status } : note)),
+      }));
+      return res.data;
     } catch (err) {
       console.error(err);
     }
@@ -88,6 +114,28 @@ const useAppStore = create((set) => ({
       await api.delete(`/lims/${id}`);
       set((state) => ({
         limsData: state.limsData.filter((item) => item.id !== id),
+      }));
+    } catch (err) {
+      console.error(err);
+    }
+  },
+
+  disposeReagent: async (id) => {
+    try {
+      const res = await api.put(`/lims/${id}`, { stockValue: 0, status: '만료' });
+      set((state) => ({
+        limsData: state.limsData.map((item) => (item.id === id ? res.data : item)),
+      }));
+    } catch (err) {
+      console.error(err);
+    }
+  },
+
+  orderReagent: async (id) => {
+    try {
+      const res = await api.put(`/lims/${id}`, { status: '주문 중' });
+      set((state) => ({
+        limsData: state.limsData.map((item) => (item.id === id ? res.data : item)),
       }));
     } catch (err) {
       console.error(err);
