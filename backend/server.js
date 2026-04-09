@@ -5,6 +5,7 @@ import authRoutes from './routes/auth.js';
 import elnRoutes from './routes/eln.js';
 import limsRoutes from './routes/lims.js';
 import membersRoutes from './routes/members.js';
+import settingsRoutes from './routes/settings.js';
 
 dotenv.config();
 
@@ -68,6 +69,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/eln', elnRoutes);
 app.use('/api/lims', limsRoutes);
 app.use('/api/members', membersRoutes);
+app.use('/api/settings', settingsRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Backend is running' });

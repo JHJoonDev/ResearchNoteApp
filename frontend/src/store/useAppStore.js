@@ -9,6 +9,7 @@ const useAppStore = create((set) => ({
   elnData: [],
   limsData: [],
   membersData: [],
+  settings: null,
   loading: false,
   error: null,
 
@@ -180,6 +181,25 @@ const useAppStore = create((set) => ({
       }));
     } catch (err) {
       console.error(err);
+    }
+  },
+
+  fetchSettings: async () => {
+    try {
+      const res = await api.get('/settings');
+      set({ settings: res.data });
+    } catch (err) {
+      console.error('Error fetching settings', err);
+    }
+  },
+
+  updateSettings: async (updatedData) => {
+    try {
+      const res = await api.put('/settings', updatedData);
+      set({ settings: res.data });
+      return res.data;
+    } catch (err) {
+      console.error('Error updating settings', err);
     }
   },
 }));
