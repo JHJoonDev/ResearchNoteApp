@@ -12,8 +12,10 @@ function LIMS() {
     cas: '',
     stockValue: 0,
     unit: 'L',
-    status: '양호'
+    status: '양호',
+    expiryDate: ''
   });
+  const [filterStatus, setFilterStatus] = useState('전체');
 
   useEffect(() => {
     fetchLimsData();
@@ -28,7 +30,8 @@ function LIMS() {
         cas: item.cas,
         stockValue: item.stockValue || 0,
         unit: item.unit || 'L',
-        status: item.status
+        status: item.status,
+        expiryDate: item.expiryDate || ''
       });
       setEditingId(item.id);
     } else {
@@ -38,7 +41,8 @@ function LIMS() {
         cas: '',
         stockValue: 0,
         unit: 'L',
-        status: '양호'
+        status: '양호',
+        expiryDate: ''
       });
       setEditingId(null);
     }
@@ -76,6 +80,11 @@ function LIMS() {
     return { background: '#D1FAE5', color: '#059669' };
   };
 
+  const filteredData = limsData.filter(item => {
+    if (filterStatus === '전체') return true;
+    return item.status === filterStatus;
+  });
+
   return (
     <div className="dashboard-content">
       <div className="card-header" style={{ marginBottom: '2rem' }}>
@@ -83,6 +92,25 @@ function LIMS() {
         <button className="btn-primary" onClick={() => handleOpenModal('create')}>
           <i className="fa-solid fa-plus"></i> 시약 등록
         </button>
+      </div>
+
+      <div className="filter-row" style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+        {['전체', '양호', '부족', '만료 예정', '만료'].map(status => (
+          <button 
+            key={status}
+            onClick={() => setFilterStatus(status)}
+            className={`btn-outline ${filterStatus === status ? 'active' : ''}`}
+            style={{ 
+              padding: '0.4rem 1.2rem', 
+              fontSize: '0.85rem',
+              backgroundColor: filterStatus === status ? 'var(--primary-color)' : 'var(--surface-color)',
+              color: filterStatus === status ? 'white' : 'var(--text-main)',
+              borderColor: filterStatus === status ? 'var(--primary-color)' : 'var(--border-color)'
+            }}
+          >
+            {status}
+          </button>
+        ))}
       </div>
       
       <div className="card">
@@ -99,33 +127,35 @@ function LIMS() {
                 <th>제조사</th>
                 <th>Cas No.</th>
                 <th>재고량</th>
+                <th>만료 기한</th>
                 <th>상태</th>
                 <th>작업</th>
               </tr>
             </thead>
             <tbody>
-              {limsData.length === 0 ? (
+              {filteredData.length === 0 ? (
                 <tr>
-                  <td colSpan="6" style={{ textAlign: 'center', padding: '2rem' }}>등록된 시약이 없습니다.</td>
+                  <td colSpan="6" style={{ textAlign: 'center', padding: '2rem' }}>해당 상태의 시약이 없습니다.</td>
                 </tr>
               ) : (
-                limsData.map((item) => (
-                  <tr key={item.id}>
+                filteredData.map((item) => (
+                  <tr key={item.id} onClick={() => handleOpenModal('edit', item)} style={{ cursor: 'pointer' }}>
                     <td><strong>{item.name}</strong></td>
                     <td>{item.brand}</td>
                     <td>{item.cas}</td>
                     <td>{item.stockValue} {item.unit}</td>
+                    <td>{item.expiryDate || '-'}</td>
                     <td>
-                      <span className="item-status" style={getStatusStyle(item.status)}>
+                      <span className={`item-status status-${item.status === '부족' ? 'danger' : item.status === '만료 예정' || item.status === '만료' ? 'danger' : 'done'}`}>
                         {item.status}
                       </span>
                     </td>
                     <td>
                       <div className="action-btns">
-                        <button className="btn-icon" onClick={() => handleOpenModal('edit', item)}>
+                        <button className="btn-icon" onClick={(e) => { e.stopPropagation(); handleOpenModal('edit', item); }}>
                           <i className="fa-solid fa-edit"></i>
                         </button>
-                        <button className="btn-icon delete" onClick={() => handleDelete(item.id)}>
+                        <button className="btn-icon delete" onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }}>
                           <i className="fa-solid fa-trash"></i>
                         </button>
                       </div>
@@ -176,14 +206,20 @@ function LIMS() {
                     </select>
                   </div>
                 </div>
-                <div className="form-group">
-                  <label>상태</label>
-                  <select name="status" className="form-input" value={formData.status} onChange={handleInputChange}>
-                    <option value="양호">양호</option>
-                    <option value="부족">부족</option>
-                    <option value="만료 예정">만료 예정</option>
-                    <option value="만료">만료</option>
-                  </select>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div className="form-group">
+                    <label>상태</label>
+                    <select name="status" className="form-input" value={formData.status} onChange={handleInputChange}>
+                      <option value="양호">양호</option>
+                      <option value="부족">부족</option>
+                      <option value="만료 예정">만료 예정</option>
+                      <option value="만료">만료</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>사용 만료 기한</label>
+                    <input type="date" name="expiryDate" className="form-input" value={formData.expiryDate} onChange={handleInputChange} style={{ fontFamily: 'inherit' }} />
+                  </div>
                 </div>
               </div>
               <div className="modal-footer">

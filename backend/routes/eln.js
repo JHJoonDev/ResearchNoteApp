@@ -2,13 +2,19 @@ import express from 'express';
 import mongoose from 'mongoose';
 import ElnNote from '../models/ElnNote.js';
 import LimsItem from '../models/LimsItem.js';
+import Notification from '../models/Notification.js';
 
 const router = express.Router();
 
 // GET all notes
 router.get('/', async (req, res) => {
+  const { search } = req.query;
   try {
-    const notes = await ElnNote.find().sort({ createdAt: -1 });
+    let query = {};
+    if (search) {
+      query = { $text: { $search: search } };
+    }
+    const notes = await ElnNote.find(query).sort({ createdAt: -1 });
     const formattedNotes = notes.map(n => ({
       id: n._id,
       title: n.title,
@@ -16,9 +22,13 @@ router.get('/', async (req, res) => {
       date: n.date,
       status: n.status,
       content: n.content,
+      approvals: n.approvals || [],
       reagentsUsed: n.reagentsUsed || [],
       attachments: n.attachments || [],
-      isStockDeducted: n.isStockDeducted || false
+      isStockDeducted: n.isStockDeducted || false,
+      isTemplate: n.isTemplate || false,
+      history: n.history || [],
+      tags: n.tags || []
     }));
     res.json(formattedNotes);
   } catch (err) {
@@ -38,9 +48,13 @@ router.get('/:id', async (req, res) => {
       date: note.date,
       status: note.status,
       content: note.content,
+      approvals: note.approvals || [],
       reagentsUsed: note.reagentsUsed || [],
       attachments: note.attachments || [],
-      isStockDeducted: note.isStockDeducted || false
+      isStockDeducted: note.isStockDeducted || false,
+      isTemplate: note.isTemplate || false,
+      history: note.history || [],
+      tags: note.tags || []
     });
   } catch (err) {
     res.status(500).json({ error: '데이터 로드 실패' });
@@ -49,7 +63,7 @@ router.get('/:id', async (req, res) => {
 
 // CREATE note (재고 차감 없음 - 승인 시에만 차감)
 router.post('/', async (req, res) => {
-  const { title, author, content, reagentsUsed, attachments } = req.body;
+  const { title, author, content, reagentsUsed, attachments, isTemplate } = req.body;
   const finalAuthor = author || '연구원';
   try {
     const newNote = new ElnNote({
@@ -58,8 +72,11 @@ router.post('/', async (req, res) => {
       content,
       reagentsUsed: reagentsUsed || [],
       attachments: attachments || [],
+      approvals: [],
       date: new Date().toISOString().split('T')[0],
-      status: '진행중'
+      status: '진행중',
+      isTemplate: isTemplate || false,
+      history: []
     });
 
     const savedNote = await newNote.save();
@@ -73,8 +90,20 @@ router.post('/', async (req, res) => {
       content: savedNote.content,
       reagentsUsed: savedNote.reagentsUsed,
       attachments: savedNote.attachments,
-      isStockDeducted: savedNote.isStockDeducted
+      isStockDeducted: savedNote.isStockDeducted,
+      isTemplate: savedNote.isTemplate,
+      history: savedNote.history
     });
+
+    // 알림 생성: 새 연구노트 작성 시 책임연구원에게 알림
+    if (!isTemplate) {
+      await Notification.create({
+        recipient: '책임연구원',
+        type: 'approval_request',
+        message: `${finalAuthor}님이 새로운 연구노트("${title}")를 작성하였습니다. 1차 승인이 필요합니다.`,
+        link: `/eln/${savedNote._id}`
+      });
+    }
   } catch (err) {
     console.error('POST /eln error:', err);
     res.status(400).json({ error: '데이터 저장 실패: ' + err.message });
@@ -87,9 +116,22 @@ router.put('/:id', async (req, res) => {
     const oldNote = await ElnNote.findById(req.params.id);
     if (!oldNote) return res.status(404).json({ error: '노트를 찾을 수 없습니다' });
 
+    let updateData = { ...req.body };
+
+    // approvals 처리 로직
+    if (updateData.status === '1차 승인' || updateData.status === '승인됨') {
+      if (updateData.approverName) {
+        if (!updateData.$push) updateData.$push = {};
+        updateData.$push.approvals = { name: updateData.approverName, date: new Date() };
+        delete updateData.approverName;
+      }
+    } else if (updateData.status === '반려' || updateData.status === '진행중') {
+      updateData.approvals = [];
+    }
+
     // 승인됨으로 변경 & 아직 재고 미차감 → 재고 차감
-    if (req.body.status === '승인됨' && !oldNote.isStockDeducted) {
-      const reagentsToDeduct = req.body.reagentsUsed || oldNote.reagentsUsed || [];
+    if (updateData.status === '승인됨' && !oldNote.isStockDeducted) {
+      const reagentsToDeduct = updateData.reagentsUsed || oldNote.reagentsUsed || [];
       for (const reagent of reagentsToDeduct) {
         if (reagent.reagentId && mongoose.Types.ObjectId.isValid(reagent.reagentId)) {
           try {
@@ -99,11 +141,11 @@ router.put('/:id', async (req, res) => {
           }
         }
       }
-      req.body.isStockDeducted = true;
+      updateData.isStockDeducted = true;
     }
 
     // 승인됨 → 다른 상태로 변경 & 이미 재고 차감됨 → 재고 복구
-    if (req.body.status && req.body.status !== '승인됨' && oldNote.status === '승인됨' && oldNote.isStockDeducted) {
+    if (updateData.status && updateData.status !== '승인됨' && oldNote.status === '승인됨' && oldNote.isStockDeducted) {
       const reagentsToReturn = oldNote.reagentsUsed || [];
       for (const reagent of reagentsToReturn) {
         if (reagent.reagentId && mongoose.Types.ObjectId.isValid(reagent.reagentId)) {
@@ -114,10 +156,27 @@ router.put('/:id', async (req, res) => {
           }
         }
       }
-      req.body.isStockDeducted = false;
+      updateData.isStockDeducted = false;
     }
 
-    const updatedNote = await ElnNote.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    // History (Audit Trail) 처리 로직
+    if (!updateData.$push) updateData.$push = {};
+    
+    // Only push history if there is actual editing (e.g. editorName is provided during manual save)
+    // Or if status changed via approval/rejection
+    if (updateData.editorName || updateData.approverName || updateData.status !== oldNote.status) {
+      const currentVersion = (oldNote.history && oldNote.history.length) ? oldNote.history.length + 1 : 1;
+      updateData.$push.history = {
+        version: currentVersion,
+        content: updateData.content !== undefined ? updateData.content : oldNote.content,
+        title: updateData.title !== undefined ? updateData.title : oldNote.title,
+        updatedBy: updateData.editorName || updateData.approverName || 'System',
+        updatedAt: new Date()
+      };
+      delete updateData.editorName;
+    }
+
+    const updatedNote = await ElnNote.findByIdAndUpdate(req.params.id, updateData, { new: true });
     res.json({
       id: updatedNote._id,
       title: updatedNote.title,
@@ -125,10 +184,42 @@ router.put('/:id', async (req, res) => {
       date: updatedNote.date,
       status: updatedNote.status,
       content: updatedNote.content,
+      approvals: updatedNote.approvals,
       reagentsUsed: updatedNote.reagentsUsed,
       attachments: updatedNote.attachments,
-      isStockDeducted: updatedNote.isStockDeducted
+      isStockDeducted: updatedNote.isStockDeducted,
+      isTemplate: updatedNote.isTemplate,
+      history: updatedNote.history
     });
+
+    // 알림 생성 로직
+    if (updateData.status && updateData.status !== oldNote.status) {
+      if (updateData.status === '1차 승인') {
+        // 책임연구원이 승인 완료 -> 연구소장에게 알림
+        await Notification.create({
+          recipient: '연구소장',
+          type: 'approval_request',
+          message: `"${updatedNote.title}" 연구노트의 1차 승인이 완료되었습니다. 최종 승인이 필요합니다.`,
+          link: `/eln/${updatedNote._id}`
+        });
+      } else if (updateData.status === '승인됨') {
+        // 연구소장이 최종 승인 -> 작성자에게 알림
+        await Notification.create({
+          recipient: updatedNote.author,
+          type: 'approved',
+          message: `축하합니다! "${updatedNote.title}" 연구노트가 최종 승인되었습니다.`,
+          link: `/eln/${updatedNote._id}`
+        });
+      } else if (updateData.status === '반려') {
+        // 승인 거절 -> 작성자에게 알림
+        await Notification.create({
+          recipient: updatedNote.author,
+          type: 'rejected',
+          message: `"${updatedNote.title}" 연구노트가 반려되었습니다. 내용을 확인해 주세요.`,
+          link: `/eln/${updatedNote._id}`
+        });
+      }
+    }
   } catch (err) {
     console.error('PUT /eln error:', err);
     res.status(400).json({ error: '데이터 수정 실패: ' + err.message });

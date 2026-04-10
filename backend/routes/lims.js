@@ -14,7 +14,8 @@ router.get('/', async (req, res) => {
       stockValue: item.stockValue,
       unit: item.unit,
       stock: `${item.stockValue} ${item.unit}`,
-      status: item.status
+      status: item.status,
+      expiryDate: item.expiryDate
     }));
     res.json(formattedItems);
   } catch (err) {
@@ -37,7 +38,8 @@ router.post('/', async (req, res) => {
       stockValue: savedItem.stockValue,
       unit: savedItem.unit,
       stock: `${savedItem.stockValue} ${savedItem.unit}`,
-      status: savedItem.status
+      status: savedItem.status,
+      expiryDate: savedItem.expiryDate
     });
   } catch (err) {
     res.status(400).json({ error: '데이터 저장 실패' });
@@ -55,7 +57,8 @@ router.put('/:id', async (req, res) => {
       stockValue: updatedItem.stockValue,
       unit: updatedItem.unit,
       stock: `${updatedItem.stockValue} ${updatedItem.unit}`,
-      status: updatedItem.status
+      status: updatedItem.status,
+      expiryDate: updatedItem.expiryDate
     });
   } catch (err) {
     res.status(400).json({ error: '데이터 수정 실패' });

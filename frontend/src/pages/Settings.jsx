@@ -37,6 +37,7 @@ function Settings() {
   const handleSave = async () => {
     setIsSaving(true);
     await updateSettings(formData);
+    useAppStore.getState().setTheme(formData.theme);
     setIsSaving(false);
     alert('설정이 저장되었습니다.');
   };
@@ -55,12 +56,12 @@ function Settings() {
       
       <div className="grid-sections">
         <section className="card">
-          <div className="card-header">
-            <h2>기본 설정</h2>
-          </div>
-          <div style={{ padding: '1rem 0' }}>
-            <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>연구실 이름</label>
+            <div className="card-header" style={{ marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)' }}>
+              <h2 style={{ color: 'var(--text-main)' }}>기본 설정</h2>
+            </div>
+            <div style={{ padding: '1rem 0' }}>
+              <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--text-main)' }}>연구실 이름</label>
               <input 
                 type="text" 
                 name="labName"
@@ -72,7 +73,7 @@ function Settings() {
             </div>
             
             <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>기본 멤버 권한</label>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--text-main)' }}>기본 멤버 권한</label>
               <select 
                 name="defaultElnRole" 
                 className="form-input" 
@@ -87,7 +88,7 @@ function Settings() {
             </div>
 
             <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>테마</label>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--text-main)' }}>테마</label>
               <select 
                 name="theme" 
                 className="form-input" 
@@ -101,7 +102,7 @@ function Settings() {
             </div>
 
             <div style={{ marginBottom: '2rem' }}>
-              <label className="checkbox-container" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+              <label className="checkbox-container" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', color: 'var(--text-main)' }}>
                 <input 
                   type="checkbox" 
                   name="receiveEmailNotifications"

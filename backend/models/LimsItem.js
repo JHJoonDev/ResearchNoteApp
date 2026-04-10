@@ -26,6 +26,10 @@ const limsItemSchema = new mongoose.Schema({
     type: String,
     enum: ['양호', '부족', '만료 예정', '만료'],
     default: '양호',
+  },
+  expiryDate: {
+    type: String,
+    default: '',
   }
 }, {
   timestamps: true,

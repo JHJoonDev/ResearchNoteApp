@@ -24,32 +24,39 @@ function Login() {
   };
 
   return (
-    <div className="login-container">
-      <div className="login-card">
-        <div className="login-header">
-          <div className="logo login-logo">
-            <i className="fa-solid fa-flask"></i>
-            <span>LabHub</span>
-          </div>
-          <p className="login-slogan">Next Generation Research Environment</p>
+    <div className="login-container" style={{ background: 'var(--bg-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: '1rem' }}>
+      <div className="login-card" style={{ width: '100%', maxWidth: '400px', background: 'var(--surface-color)', borderRadius: '24px', padding: '2.5rem 2rem', boxShadow: 'var(--shadow-lg)', border: '1px solid var(--border-color)' }}>
+        
+        <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
+          <h1 style={{ fontSize: '1.75rem', fontWeight: '800', color: 'var(--text-main)', marginBottom: '0.5rem', letterSpacing: '-0.025em' }}>
+            계정에 로그인
+          </h1>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: '500' }}>
+            LabHub — AI 업무 자동화 연구 플랫폼
+          </p>
         </div>
 
-        <form onSubmit={handleLogin} className="login-form">
-          <div className="form-group">
-            <label htmlFor="email">이메일 계정</label>
+        <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <label htmlFor="email" style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-main)' }}>이메일</label>
             <input 
               type="email" 
               id="email" 
-              placeholder="researcher@labhub.com" 
+              placeholder="name@example.com" 
               className="form-input"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              style={{ padding: '0.875rem 1rem', borderRadius: '12px', border: '1px solid var(--border-color)', fontSize: '0.95rem' }}
             />
           </div>
           
-          <div className="form-group">
-            <label htmlFor="password">비밀번호</label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <label htmlFor="password" style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-main)' }}>비밀번호</label>
+              <a href="#" style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textDecoration: 'underline' }}>비밀번호를 잊으셨나요?</a>
+            </div>
             <input 
               type="password" 
               id="password" 
@@ -58,25 +65,20 @@ function Login() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              style={{ padding: '0.875rem 1rem', borderRadius: '12px', border: '1px solid var(--border-color)', fontSize: '0.95rem' }}
             />
           </div>
-          
-          <div className="form-options">
-            <label className="checkbox-container">
-              <input type="checkbox" /> 로그인 상태 유지
-            </label>
-            <a href="#" className="forgot-password">비밀번호 찾기</a>
-          </div>
 
-          {error && <div className="error-message" style={{ color: 'var(--danger-color)', marginBottom: '1rem', fontSize: '0.875rem' }}>{error}</div>}
+          {error && <div style={{ color: 'var(--danger)', fontSize: '0.875rem', textAlign: 'center' }}>{error}</div>}
 
-          <button type="submit" className="btn-primary btn-block" disabled={loading}>
-            {loading ? '접속 중...' : '시스템 접속하기'}
+          <button type="submit" className="btn-primary" disabled={loading} style={{ marginTop: '0.5rem', width: '100%', padding: '0.875rem', borderRadius: '14px', fontSize: '1rem', fontWeight: '700' }}>
+            {loading ? '접속 중...' : '로그인'}
           </button>
         </form>
         
-        <div className="login-footer">
-          <p>LabHub v1.0.0 | 보안 연결됨 <i className="fa-solid fa-lock"></i></p>
+        <div style={{ marginTop: '2.5rem', textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+          가입하시면 LabHub의 <a href="#" style={{ underline: 'always', color: 'var(--text-main)' }}>이용약관</a> 및 <br/>
+          <a href="#" style={{ underline: 'always', color: 'var(--text-main)' }}>개인정보 처리방침</a>에 동의하게 됩니다.
         </div>
       </div>
     </div>

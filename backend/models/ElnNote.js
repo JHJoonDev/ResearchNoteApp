@@ -11,9 +11,13 @@ const elnNoteSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['진행중', '승인됨', '반려'],
+    enum: ['진행중', '1차 승인', '승인됨', '반려'],
     default: '진행중',
   },
+  approvals: [{
+    name: String,
+    date: { type: Date, default: Date.now }
+  }],
   date: {
     type: String,
   },
@@ -37,9 +41,23 @@ const elnNoteSchema = new mongoose.Schema({
   isStockDeducted: {
     type: Boolean,
     default: false
-  }
+  },
+  isTemplate: {
+    type: Boolean,
+    default: false
+  },
+  history: [{
+    version: Number,
+    content: String,
+    title: String,
+    updatedBy: String,
+    updatedAt: { type: Date, default: Date.now }
+  }],
+  tags: [String]
 }, {
   timestamps: true,
 });
+
+elnNoteSchema.index({ title: 'text', content: 'text' });
 
 export default mongoose.model('ElnNote', elnNoteSchema);

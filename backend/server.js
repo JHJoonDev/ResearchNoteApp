@@ -6,6 +6,8 @@ import elnRoutes from './routes/eln.js';
 import limsRoutes from './routes/lims.js';
 import membersRoutes from './routes/members.js';
 import settingsRoutes from './routes/settings.js';
+import notificationRoutes from './routes/notifications.js';
+import statsRoutes from './routes/stats.js';
 
 dotenv.config();
 
@@ -70,6 +72,8 @@ app.use('/api/eln', elnRoutes);
 app.use('/api/lims', limsRoutes);
 app.use('/api/members', membersRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/stats', statsRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Backend is running' });

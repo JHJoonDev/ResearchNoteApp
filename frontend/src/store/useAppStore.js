@@ -9,14 +9,28 @@ const useAppStore = create((set) => ({
   elnData: [],
   limsData: [],
   membersData: [],
+  notifications: [],
+  dashboardStats: null,
   settings: null,
   loading: false,
   error: null,
+  theme: localStorage.getItem('theme') || 'light',
 
-  fetchElnData: async () => {
+  toggleTheme: () => set((state) => {
+    const newTheme = state.theme === 'light' ? 'dark' : 'light';
+    localStorage.setItem('theme', newTheme);
+    return { theme: newTheme };
+  }),
+
+  setTheme: (theme) => set(() => {
+    localStorage.setItem('theme', theme);
+    return { theme };
+  }),
+
+  fetchElnData: async (search = '') => {
     set({ loading: true, error: null });
     try {
-      const res = await api.get('/eln');
+      const res = await api.get('/eln', { params: { search } });
       set({ elnData: res.data, loading: false });
     } catch (err) {
       set({ error: err.message, loading: false });
@@ -57,11 +71,15 @@ const useAppStore = create((set) => ({
     }
   },
 
-  updateElnStatus: async (id, status) => {
+  updateElnStatus: async (id, status, approverName = null) => {
     try {
-      const res = await api.put(`/eln/${id}`, { status });
+      const payload = { status };
+      if (approverName) {
+        payload.approverName = approverName;
+      }
+      const res = await api.put(`/eln/${id}`, payload);
       set((state) => ({
-        elnData: state.elnData.map((note) => (note.id === id ? { ...note, status: res.data.status } : note)),
+        elnData: state.elnData.map((note) => (note.id === id ? { ...note, status: res.data.status, approvals: res.data.approvals } : note)),
       }));
       return res.data;
     } catch (err) {
@@ -200,6 +218,35 @@ const useAppStore = create((set) => ({
       return res.data;
     } catch (err) {
       console.error('Error updating settings', err);
+    }
+  },
+
+  fetchDashboardStats: async () => {
+    try {
+      const res = await api.get('/stats');
+      set({ dashboardStats: res.data });
+    } catch (err) {
+      console.error('Error fetching dashboard stats', err);
+    }
+  },
+
+  fetchNotifications: async (name, role) => {
+    try {
+      const res = await api.get('/notifications', { params: { name, role } });
+      set({ notifications: res.data });
+    } catch (err) {
+      console.error('Error fetching notifications', err);
+    }
+  },
+
+  markNotificationAsRead: async (id) => {
+    try {
+      const res = await api.put(`/notifications/${id}/read`);
+      set((state) => ({
+        notifications: state.notifications.map((n) => (n._id === id ? res.data : n)),
+      }));
+    } catch (err) {
+      console.error('Error marking notification as read', err);
     }
   },
 }));

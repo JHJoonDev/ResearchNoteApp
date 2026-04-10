@@ -10,7 +10,8 @@ router.get('/', async (req, res) => {
       id: m._id,
       name: m.name,
       email: m.email,
-      role: m.role
+      role: m.role,
+      elnRole: m.elnRole || '연구원'
     }));
     res.json(formattedMembers);
   } catch (err) {
@@ -29,7 +30,8 @@ router.post('/', async (req, res) => {
       id: savedMember._id,
       name: savedMember.name,
       email: savedMember.email,
-      role: savedMember.role
+      role: savedMember.role,
+      elnRole: savedMember.elnRole || '연구원'
     });
   } catch (err) {
     res.status(400).json({ error: '데이터 저장 실패' });
@@ -43,7 +45,8 @@ router.put('/:id', async (req, res) => {
       id: updatedMember._id,
       name: updatedMember.name,
       email: updatedMember.email,
-      role: updatedMember.role
+      role: updatedMember.role,
+      elnRole: updatedMember.elnRole || '연구원'
     });
   } catch (err) {
     res.status(400).json({ error: '데이터 수정 실패' });

@@ -9,7 +9,8 @@ function Members() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    role: 'researcher'
+    role: 'researcher',
+    elnRole: '연구원'
   });
 
   useEffect(() => {
@@ -22,14 +23,16 @@ function Members() {
       setFormData({
         name: member.name,
         email: member.email,
-        role: member.role
+        role: member.role,
+        elnRole: member.elnRole || '연구원'
       });
       setEditingId(member.id);
     } else {
       setFormData({
         name: '',
         email: '',
-        role: 'researcher'
+        role: 'researcher',
+        elnRole: '연구원'
       });
       setEditingId(null);
     }
@@ -62,9 +65,15 @@ function Members() {
   };
 
   const getRoleBadge = (role) => {
-    if (role === 'admin') return '책임 연구원 (Admin)';
-    if (role === 'researcher') return '연구원';
-    return '방문 연구원';
+    if (role === 'admin') return '시스템 관리자';
+    if (role === 'researcher') return '시스템 사용자';
+    return '방문 사용자';
+  };
+
+  const getElnRoleColor = (elnRole) => {
+    if (elnRole === '연구소장') return 'var(--danger)'; 
+    if (elnRole === '책임연구원') return 'var(--warning)';
+    return 'var(--success)';
   };
 
   const getAvatarColor = (role) => {
@@ -110,7 +119,14 @@ function Members() {
                     style={{ width: '80px', height: '80px', borderRadius: '50%', marginBottom: '1.5rem', border: '4px solid #F3F4F6' }} 
                   />
                   <h3 style={{ fontSize: '1.3rem', marginBottom: '0.4rem', fontWeight: '700' }}>{member.name}</h3>
-                  <p style={{ color: 'var(--primary-color)', fontSize: '0.9rem', fontWeight: '600', marginBottom: '0.5rem' }}>{getRoleBadge(member.role)}</p>
+                  <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
+                    <span style={{ backgroundColor: 'var(--bg-secondary)', padding: '0.2rem 0.6rem', borderRadius: '4px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                      {getRoleBadge(member.role)}
+                    </span>
+                    <span style={{ backgroundColor: 'var(--bg-secondary)', padding: '0.2rem 0.6rem', borderRadius: '4px', fontSize: '0.8rem', color: getElnRoleColor(member.elnRole), fontWeight: '600' }}>
+                      {member.elnRole || '연구원'}
+                    </span>
+                  </div>
                   <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{member.email}</p>
                 </div>
               ))
@@ -136,13 +152,23 @@ function Members() {
                   <label>이메일</label>
                   <input type="email" name="email" className="form-input" value={formData.email} onChange={handleInputChange} required />
                 </div>
-                <div className="form-group">
-                  <label>권한</label>
-                  <select name="role" className="form-input" value={formData.role} onChange={handleInputChange}>
-                    <option value="admin">책임 연구원 (Admin)</option>
-                    <option value="researcher">연구원</option>
-                    <option value="viewer">방문 연구원</option>
-                  </select>
+                <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+                  <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                    <label>앱 사용 권한</label>
+                    <select name="role" className="form-input" value={formData.role} onChange={handleInputChange}>
+                      <option value="admin">시스템 관리자 (Admin)</option>
+                      <option value="researcher">시스템 사용자</option>
+                      <option value="viewer">방문 사용자</option>
+                    </select>
+                  </div>
+                  <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                    <label>ELN 결재 권한</label>
+                    <select name="elnRole" className="form-input" value={formData.elnRole} onChange={handleInputChange}>
+                      <option value="연구원">연구원 (기본 작성자)</option>
+                      <option value="책임연구원">책임연구원 (1차 승인)</option>
+                      <option value="연구소장">연구소장 (최종 승인)</option>
+                    </select>
+                  </div>
                 </div>
                 {modalMode === 'create' && (
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '-0.5rem' }}>
