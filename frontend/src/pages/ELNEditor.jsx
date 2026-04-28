@@ -18,9 +18,10 @@ function ELNEditor() {
     fetchElnData,
     fetchSingleNote, 
     createElnNote, 
-    updateElnNote 
+    updateElnNote,
+    uploadFile
   } = useAppStore();
-  
+
   const user = useAuthStore(state => state.user);
   const userName = user?.name || '연구원';
 
@@ -40,6 +41,10 @@ function ELNEditor() {
   const [reagentSearch, setReagentSearch] = useState('');
   const [selectedReagentId, setSelectedReagentId] = useState('');
   const [useAmount, setUseAmount] = useState(0);
+  
+  const [comments, setComments] = useState([]);
+  const [newComment, setNewComment] = useState('');
+  const { addComment } = useAppStore();
 
   const textareaRef = useRef(null);
   const isEditMode = !!id;
@@ -89,11 +94,23 @@ const loadNote = async () => {
       setStatus(note.status);
       setTags(note.tags || []);
       setHistory(note.history || []);
+      setComments(note.comments || []);
     } else {
       alert('노트를 불러올 수 없습니다.');
       navigate('/eln');
     }
     setIsLoading(false);
+  };
+
+  const handleAddComment = async (e) => {
+    e.preventDefault();
+    if (!newComment.trim() || !id) return;
+    
+    const updatedNote = await addComment(id, newComment, userName);
+    if (updatedNote) {
+      setComments(updatedNote.comments);
+      setNewComment('');
+    }
   };
 
   const handleAutoSave = async () => {
@@ -234,16 +251,23 @@ const loadNote = async () => {
     setReagentsUsed(reagentsUsed.filter((_, i) => i !== idx));
   };
 
-  const handleFileUpload = (e) => {
+  const handleFileUpload = async (e) => {
     const files = Array.from(e.target.files);
-    const newAttachments = files.map(file => ({
-        name: file.name,
-        size: Math.round(file.size / 1024), 
-        type: file.type,
-        url: '#', // Mock URL
-        uploadedAt: new Date()
-    }));
-    setAttachments([...attachments, ...newAttachments]);
+    
+    for (const file of files) {
+      const result = await uploadFile(file);
+      if (result && result.success) {
+        setAttachments(prev => [...prev, {
+          name: result.name,
+          size: result.size,
+          type: result.type,
+          url: result.url,
+          uploadedAt: new Date()
+        }]);
+      } else {
+        alert(`${file.name} 업로드에 실패했습니다.`);
+      }
+    }
   };
 
   const handleRemoveAttachment = (idx) => {
@@ -568,6 +592,42 @@ const loadNote = async () => {
             )}
           </div>
         </div>
+
+        {/* Comments Section */}
+        {isEditMode && (
+          <div className="sidebar-widget" style={{ marginTop: '1rem' }}>
+            <h3><i className="fa-solid fa-comments"></i> 코멘트 및 리뷰</h3>
+            
+            <div style={{ maxHeight: '250px', overflowY: 'auto', marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {comments.length === 0 ? (
+                <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8rem', padding: '1rem' }}>코멘트가 없습니다.</div>
+              ) : (
+                comments.map((comment, idx) => (
+                  <div key={idx} style={{ background: 'var(--bg-color)', padding: '0.75rem', borderRadius: '8px', fontSize: '0.85rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
+                      <span style={{ fontWeight: '600', color: 'var(--primary-color)' }}>{comment.author}</span>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{new Date(comment.createdAt).toLocaleDateString()}</span>
+                    </div>
+                    <div style={{ lineHeight: '1.4', wordBreak: 'break-word' }}>{comment.text}</div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <form onSubmit={handleAddComment} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <textarea 
+                className="form-input" 
+                placeholder="코멘트 작성..." 
+                rows="2"
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                style={{ resize: 'none', fontSize: '0.85rem' }}
+                required
+              />
+              <button type="submit" className="btn-primary" style={{ padding: '0.5rem', fontSize: '0.85rem' }}>등록</button>
+            </form>
+          </div>
+        )}
       </aside>
 
       {/* History (Audit Trail) Sidebar Overlay */}

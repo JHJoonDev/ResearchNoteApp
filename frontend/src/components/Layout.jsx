@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import useAuthStore from '../store/useAuthStore';
 import useAppStore from '../store/useAppStore';
+import ProfileModal from './ProfileModal';
 
 function Layout() {
   const navigate = useNavigate();
@@ -15,11 +16,19 @@ function Layout() {
 
   const theme = useAppStore((state) => state.theme);
   const toggleTheme = useAppStore((state) => state.toggleTheme);
-  const { notifications, fetchNotifications, markNotificationAsRead } = useAppStore();
+  const { notifications, fetchNotifications, markNotificationAsRead, searchGlobal } = useAppStore();
   const user = useAuthStore((state) => state.user);
+  
   const [showNotifMenu, setShowNotifMenu] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState(null);
+  const [isSearching, setIsSearching] = useState(false);
+  
   const notifMenuRef = useRef(null);
+  const searchRef = useRef(null);
 
   useEffect(() => {
     if (user) {
@@ -32,16 +41,34 @@ function Layout() {
     }
   }, [user, fetchNotifications]);
 
-  // Click outside to close notification menu
+  // Click outside to close notification and search menus
   useEffect(() => {
     function handleClickOutside(event) {
       if (notifMenuRef.current && !notifMenuRef.current.contains(event.target)) {
         setShowNotifMenu(false);
       }
+      if (searchRef.current && !searchRef.current.contains(event.target)) {
+        setSearchResults(null);
+      }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(async () => {
+      if (searchQuery.trim().length >= 2) {
+        setIsSearching(true);
+        const results = await searchGlobal(searchQuery);
+        setSearchResults(results);
+        setIsSearching(false);
+      } else {
+        setSearchResults(null);
+      }
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchQuery, searchGlobal]);
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
@@ -93,10 +120,50 @@ function Layout() {
           <button className="mobile-hamburger" onClick={() => setSidebarOpen(!sidebarOpen)}>
             <i className="fa-solid fa-bars"></i>
           </button>
-          <div className="search-bar">
+          
+          <div className="search-bar" ref={searchRef} style={{ position: 'relative' }}>
             <i className="fa-solid fa-magnifying-glass"></i>
-            <input type="text" placeholder="노트 기록, 시약명, 또는 프로토콜 검색..." />
+            <input 
+              type="text" 
+              placeholder="노트 제목, 시약명, 멤버 등 검색..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            {isSearching && <span className="spinner" style={{ width: '15px', height: '15px', marginLeft: '10px' }}></span>}
+            
+            {searchResults && (
+              <div style={{
+                position: 'absolute', top: '100%', left: 0, right: 0, backgroundColor: 'var(--surface-color)',
+                border: '1px solid var(--border-color)', borderRadius: '12px', boxShadow: '0 8px 30px rgba(0,0,0,0.15)',
+                marginTop: '0.5rem', padding: '1rem', zIndex: 1000, maxHeight: '400px', overflowY: 'auto'
+              }}>
+                <div style={{ marginBottom: '1rem' }}>
+                  <h4 style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>연구노트</h4>
+                  {searchResults.eln.length === 0 ? <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>결과 없음</p> : 
+                    searchResults.eln.map(item => (
+                      <div key={item._id} onClick={() => { navigate(`/eln/${item._id}`); setSearchResults(null); }} style={{ padding: '0.5rem', cursor: 'pointer', borderRadius: '4px' }} className="notif-item-hover">
+                        <div style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>{item.title}</div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>작성자: {item.author}</div>
+                      </div>
+                    ))
+                  }
+                </div>
+                
+                <div style={{ marginBottom: '1rem' }}>
+                  <h4 style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>시약 관리 (LIMS)</h4>
+                  {searchResults.lims.length === 0 ? <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>결과 없음</p> : 
+                    searchResults.lims.map(item => (
+                      <div key={item._id} onClick={() => { navigate('/lims'); setSearchResults(null); }} style={{ padding: '0.5rem', cursor: 'pointer', borderRadius: '4px' }} className="notif-item-hover">
+                        <div style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>{item.name} <span style={{fontSize:'0.8rem', color:'var(--text-muted)'}}>(CAS: {item.cas})</span></div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>재고: {item.stockValue} {item.unit}</div>
+                      </div>
+                    ))
+                  }
+                </div>
+              </div>
+            )}
           </div>
+          
           <div className="user-profile">
             <button className="theme-toggle-btn" onClick={toggleTheme} title={theme === 'dark' ? '라이트 모드로 전환' : '다크 모드로 전환'}>
               <i className={`fa-solid ${theme === 'dark' ? 'fa-sun' : 'fa-moon'}`}></i>
@@ -111,7 +178,7 @@ function Layout() {
                 <div className="notif-dropdown" style={{
                   position: 'absolute', top: '100%', right: 0, width: '320px', 
                   backgroundColor: 'var(--surface-color)', border: '1px solid var(--border-color)',
-                  borderRadius: '12px', boxShadow: '0 8px 30px rgba(0,0,0,0.15)', zIindex: 1000, 
+                  borderRadius: '12px', boxShadow: '0 8px 30px rgba(0,0,0,0.15)', zIndex: 1000, 
                   marginTop: '0.75rem', overflow: 'hidden', display: 'flex', flexDirection: 'column'
                 }}>
                   <div style={{ padding: '1rem', borderBottom: '1px solid var(--border-color)', fontWeight: 'bold', display: 'flex', justifyContent: 'space-between' }}>
@@ -165,13 +232,20 @@ function Layout() {
                 </div>
               )}
             </div>
-            <img src={`https://ui-avatars.com/api/?name=${user?.name || 'User'}&background=0D8ABC&color=fff`} alt="User" />
+            <img 
+              src={`https://ui-avatars.com/api/?name=${user?.name || 'User'}&background=0D8ABC&color=fff`} 
+              alt="User" 
+              onClick={() => setShowProfileModal(true)}
+              style={{ cursor: 'pointer' }}
+            />
           </div>
         </header>
         
         {/* Child Pages are rendered here */}
         <Outlet />
       </main>
+      
+      {showProfileModal && <ProfileModal onClose={() => setShowProfileModal(false)} />}
     </div>
   );
 }

@@ -129,13 +129,42 @@ function ELN() {
     navigate(`/eln/new?templateId=${templateId}`);
   };
 
+  const handleExportCSV = () => {
+    if (elnData.length === 0) return alert('내보낼 데이터가 없습니다.');
+    const headers = ['노트 제목', '작성자', '작성일', '상태', '태그'];
+    const csvContent = [
+      headers.join(','),
+      ...elnData.map(note => [
+        `"${note.title.replace(/"/g, '""')}"`, 
+        `"${note.author}"`, 
+        note.date, 
+        note.status, 
+        `"${(note.tags || []).join(', ')}"`
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `ELN_연구노트_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="dashboard-content">
       <div className="card-header" style={{ marginBottom: '1.5rem' }}>
         <h1 className="page-title" style={{ marginBottom: 0 }}>연구노트 (ELN)</h1>
-        <button className="btn-primary" onClick={handleCreateNew}>
-          <i className="fa-solid fa-pen-nib"></i> 새 노트 작성
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button className="btn-outline" onClick={handleExportCSV}>
+            <i className="fa-solid fa-file-csv"></i> CSV 내보내기
+          </button>
+          <button className="btn-primary" onClick={handleCreateNew}>
+            <i className="fa-solid fa-pen-nib"></i> 새 노트 작성
+          </button>
+        </div>
       </div>
 
       <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
@@ -225,6 +254,31 @@ function ELN() {
               )}
             </tbody>
           </table>
+        )}
+
+        {/* Pagination UI */}
+        {!loading && useAppStore.getState().elnPagination && useAppStore.getState().elnPagination.totalPages > 1 && (
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: '1.5rem', gap: '0.5rem', alignItems: 'center' }}>
+            <button 
+              className="btn-outline" 
+              disabled={useAppStore.getState().elnPagination.page === 1}
+              onClick={() => fetchElnData(useAppStore.getState().elnPagination.page - 1, 10, searchTerm)}
+              style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
+            >
+              이전
+            </button>
+            <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+              {useAppStore.getState().elnPagination.page} / {useAppStore.getState().elnPagination.totalPages}
+            </span>
+            <button 
+              className="btn-outline" 
+              disabled={useAppStore.getState().elnPagination.page === useAppStore.getState().elnPagination.totalPages}
+              onClick={() => fetchElnData(useAppStore.getState().elnPagination.page + 1, 10, searchTerm)}
+              style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
+            >
+              다음
+            </button>
+          </div>
         )}
       </div>
 

@@ -53,6 +53,11 @@ const elnNoteSchema = new mongoose.Schema({
     updatedBy: String,
     updatedAt: { type: Date, default: Date.now }
   }],
+  comments: [{
+    author: String,
+    text: String,
+    createdAt: { type: Date, default: Date.now }
+  }],
   tags: [String]
 }, {
   timestamps: true,

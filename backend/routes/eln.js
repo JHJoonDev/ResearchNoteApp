@@ -1,5 +1,6 @@
 import express from 'express';
 import mongoose from 'mongoose';
+import { body, validationResult } from 'express-validator';
 import ElnNote from '../models/ElnNote.js';
 import LimsItem from '../models/LimsItem.js';
 import Notification from '../models/Notification.js';
@@ -8,13 +9,20 @@ const router = express.Router();
 
 // GET all notes
 router.get('/', async (req, res) => {
-  const { search } = req.query;
+  const { search, page: pageQuery, limit: limitQuery } = req.query;
   try {
     let query = {};
     if (search) {
       query = { $text: { $search: search } };
     }
-    const notes = await ElnNote.find(query).sort({ createdAt: -1 });
+    
+    const page = parseInt(pageQuery) || 1;
+    const limit = parseInt(limitQuery) || 10;
+    const skip = (page - 1) * limit;
+
+    const total = await ElnNote.countDocuments(query);
+    const notes = await ElnNote.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit);
+    
     const formattedNotes = notes.map(n => ({
       id: n._id,
       title: n.title,
@@ -30,7 +38,12 @@ router.get('/', async (req, res) => {
       history: n.history || [],
       tags: n.tags || []
     }));
-    res.json(formattedNotes);
+    
+    res.json({
+      items: formattedNotes,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page
+    });
   } catch (err) {
     res.status(500).json({ error: '데이터 로드 실패' });
   }
@@ -62,7 +75,15 @@ router.get('/:id', async (req, res) => {
 });
 
 // CREATE note (재고 차감 없음 - 승인 시에만 차감)
-router.post('/', async (req, res) => {
+router.post('/', [
+  body('title').notEmpty().withMessage('제목을 입력하세요.'),
+  body('author').notEmpty().withMessage('작성자가 없습니다.')
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ error: errors.array()[0].msg });
+  }
+  
   const { title, author, content, reagentsUsed, attachments, isTemplate } = req.body;
   const finalAuthor = author || '연구원';
   try {
@@ -233,6 +254,26 @@ router.delete('/:id', async (req, res) => {
     res.json({ message: '삭제 완료' });
   } catch (err) {
     res.status(400).json({ error: '데이터 삭제 실패' });
+  }
+});
+
+// Add comment
+router.post('/:id/comments', async (req, res) => {
+  try {
+    const note = await ElnNote.findById(req.params.id);
+    if (!note) return res.status(404).json({ error: '노트를 찾을 수 없습니다.' });
+
+    note.comments = note.comments || [];
+    note.comments.push({
+      author: req.body.author,
+      text: req.body.text,
+      createdAt: new Date()
+    });
+
+    await note.save();
+    res.json(note);
+  } catch (err) {
+    res.status(500).json({ error: '댓글 작성 실패' });
   }
 });
 

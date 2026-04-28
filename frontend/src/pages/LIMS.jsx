@@ -85,13 +85,38 @@ function LIMS() {
     return item.status === filterStatus;
   });
 
+  const handleExportCSV = () => {
+    if (limsData.length === 0) return alert('내보낼 데이터가 없습니다.');
+    const headers = ['시약명', '제조사', 'Cas No.', '재고량', '단위', '상태', '만료일'];
+    const csvContent = [
+      headers.join(','),
+      ...limsData.map(item => [
+        `"${item.name}"`, `"${item.brand || ''}"`, `"${item.cas || ''}"`, item.stockValue, item.unit, item.status, item.expiryDate || ''
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `LIMS_재고현황_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="dashboard-content">
-      <div className="card-header" style={{ marginBottom: '2rem' }}>
+      <div className="card-header" style={{ marginBottom: '1.5rem' }}>
         <h1 className="page-title" style={{ marginBottom: 0 }}>시약 관리 (LIMS)</h1>
-        <button className="btn-primary" onClick={() => handleOpenModal('create')}>
-          <i className="fa-solid fa-plus"></i> 시약 등록
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button className="btn-outline" onClick={handleExportCSV}>
+            <i className="fa-solid fa-file-csv"></i> CSV 내보내기
+          </button>
+          <button className="btn-primary" onClick={() => handleOpenModal('create')}>
+            <i className="fa-solid fa-plus"></i> 새 시약 등록
+          </button>
+        </div>
       </div>
 
       <div className="filter-row" style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
@@ -124,10 +149,8 @@ function LIMS() {
             <thead>
               <tr>
                 <th>시약명</th>
-                <th>제조사</th>
-                <th>Cas No.</th>
-                <th>재고량</th>
-                <th>만료 기한</th>
+                <th>제조사 / Cas No.</th>
+                <th>재고</th>
                 <th>상태</th>
                 <th>작업</th>
               </tr>
@@ -135,18 +158,25 @@ function LIMS() {
             <tbody>
               {filteredData.length === 0 ? (
                 <tr>
-                  <td colSpan="6" style={{ textAlign: 'center', padding: '2rem' }}>해당 상태의 시약이 없습니다.</td>
+                  <td colSpan="5" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>조건에 맞는 시약이 없습니다.</td>
                 </tr>
               ) : (
                 filteredData.map((item) => (
                   <tr key={item.id} onClick={() => handleOpenModal('edit', item)} style={{ cursor: 'pointer' }}>
-                    <td><strong>{item.name}</strong></td>
-                    <td>{item.brand}</td>
-                    <td>{item.cas}</td>
-                    <td>{item.stockValue} {item.unit}</td>
-                    <td>{item.expiryDate || '-'}</td>
+                    <td style={{ fontWeight: '600' }}>{item.name}</td>
                     <td>
-                      <span className={`item-status status-${item.status === '부족' ? 'danger' : item.status === '만료 예정' || item.status === '만료' ? 'danger' : 'done'}`}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                        <span>{item.brand}</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{item.cas}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <span className={`stock-indicator ${item.stockValue > 10 ? 'stock-high' : item.stockValue > 0 ? 'stock-low' : 'stock-none'}`}>
+                        {item.stockValue} {item.unit}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={`item-status status-${item.status === '양호' ? 'done' : item.status === '부족' ? 'warning' : 'danger'}`}>
                         {item.status}
                       </span>
                     </td>
@@ -165,6 +195,31 @@ function LIMS() {
               )}
             </tbody>
           </table>
+        )}
+
+        {/* Pagination UI */}
+        {!loading && useAppStore.getState().limsPagination && useAppStore.getState().limsPagination.totalPages > 1 && (
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: '1.5rem', gap: '0.5rem', alignItems: 'center' }}>
+            <button 
+              className="btn-outline" 
+              disabled={useAppStore.getState().limsPagination.page === 1}
+              onClick={() => fetchLimsData(useAppStore.getState().limsPagination.page - 1, 10)}
+              style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
+            >
+              이전
+            </button>
+            <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+              {useAppStore.getState().limsPagination.page} / {useAppStore.getState().limsPagination.totalPages}
+            </span>
+            <button 
+              className="btn-outline" 
+              disabled={useAppStore.getState().limsPagination.page === useAppStore.getState().limsPagination.totalPages}
+              onClick={() => fetchLimsData(useAppStore.getState().limsPagination.page + 1, 10)}
+              style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
+            >
+              다음
+            </button>
+          </div>
         )}
       </div>
 

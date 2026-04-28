@@ -5,46 +5,75 @@ const api = axios.create({
   baseURL: 'http://localhost:5000/api',
 });
 
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
 const useAppStore = create((set) => ({
   elnData: [],
+  elnPagination: { page: 1, totalPages: 1 },
   limsData: [],
+  limsPagination: { page: 1, totalPages: 1 },
   membersData: [],
   notifications: [],
   dashboardStats: null,
-  settings: null,
-  loading: false,
-  error: null,
   theme: localStorage.getItem('theme') || 'light',
+  loading: false,
+  settings: null,
 
+  setTheme: (theme) => {
+    localStorage.setItem('theme', theme);
+    set({ theme });
+  },
   toggleTheme: () => set((state) => {
     const newTheme = state.theme === 'light' ? 'dark' : 'light';
     localStorage.setItem('theme', newTheme);
     return { theme: newTheme };
   }),
 
-  setTheme: (theme) => set(() => {
-    localStorage.setItem('theme', theme);
-    return { theme };
-  }),
-
-  fetchElnData: async (search = '') => {
-    set({ loading: true, error: null });
+  fetchElnData: async (page = 1, limit = 10, search = '') => {
+    set({ loading: true });
     try {
-      const res = await api.get('/eln', { params: { search } });
-      set({ elnData: res.data, loading: false });
+      const res = await api.get('/eln', { params: { page, limit, search } });
+      if (res.data.items) {
+        set({ elnData: res.data.items, elnPagination: { page: res.data.currentPage, totalPages: res.data.totalPages }, loading: false });
+      } else {
+        set({ elnData: res.data, loading: false }); // Fallback
+      }
     } catch (err) {
-      set({ error: err.message, loading: false });
+      console.error(err);
+      set({ loading: false });
     }
   },
 
-  fetchSingleNote: async (id) => {
-    set({ loading: true, error: null });
+  uploadFile: async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
     try {
-      const res = await api.get(`/eln/${id}`);
-      set({ loading: false });
+      const res = await api.post('/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
       return res.data;
     } catch (err) {
-      set({ error: err.message, loading: false });
+      console.error(err);
       return null;
     }
   },
@@ -52,11 +81,12 @@ const useAppStore = create((set) => ({
   createElnNote: async (note) => {
     try {
       const res = await api.post('/eln', note);
-      set((state) => ({ elnData: [res.data, ...state.elnData] }));
+      if (res.data.id) {
+        set((state) => ({ elnData: [res.data, ...state.elnData] }));
+      }
       return res.data;
     } catch (err) {
       console.error(err);
-      return null;
     }
   },
 
@@ -71,9 +101,19 @@ const useAppStore = create((set) => ({
     }
   },
 
-  updateElnStatus: async (id, status, approverName = null) => {
+  fetchSingleNote: async (id) => {
     try {
-      const payload = { status };
+      const res = await api.get(`/eln/${id}`);
+      return res.data;
+    } catch (err) {
+      console.error(err);
+      return null;
+    }
+  },
+
+  updateNoteApproval: async (id, approverName, action) => {
+    try {
+      const payload = { action };
       if (approverName) {
         payload.approverName = approverName;
       }
@@ -84,6 +124,16 @@ const useAppStore = create((set) => ({
       return res.data;
     } catch (err) {
       console.error(err);
+    }
+  },
+
+  addComment: async (id, text, author) => {
+    try {
+      const res = await api.post(`/eln/${id}/comments`, { text, author });
+      return res.data;
+    } catch (err) {
+      console.error(err);
+      return null;
     }
   },
 
@@ -98,13 +148,18 @@ const useAppStore = create((set) => ({
     }
   },
 
-  fetchLimsData: async () => {
-    set({ loading: true, error: null });
+  fetchLimsData: async (page = 1, limit = 10) => {
+    set({ loading: true });
     try {
-      const res = await api.get('/lims');
-      set({ limsData: res.data, loading: false });
+      const res = await api.get('/lims', { params: { page, limit } });
+      if (res.data.items) {
+        set({ limsData: res.data.items, limsPagination: { page: res.data.currentPage, totalPages: res.data.totalPages }, loading: false });
+      } else {
+        set({ limsData: res.data, loading: false });
+      }
     } catch (err) {
-      set({ error: err.message, loading: false });
+      console.error(err);
+      set({ loading: false });
     }
   },
 
@@ -242,13 +297,23 @@ const useAppStore = create((set) => ({
   markNotificationAsRead: async (id) => {
     try {
       const res = await api.put(`/notifications/${id}/read`);
-      set((state) => ({
-        notifications: state.notifications.map((n) => (n._id === id ? res.data : n)),
+      set(state => ({
+        notifications: state.notifications.map(n => n._id === id ? res.data : n)
       }));
     } catch (err) {
       console.error('Error marking notification as read', err);
     }
   },
+
+  searchGlobal: async (query) => {
+    try {
+      const res = await api.get(`/search?q=${encodeURIComponent(query)}`);
+      return res.data;
+    } catch (err) {
+      console.error(err);
+      return { eln: [], lims: [], members: [] };
+    }
+  }
 }));
 
 export default useAppStore;

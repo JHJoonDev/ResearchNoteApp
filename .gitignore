@@ -33,3 +33,7 @@ Thumbs.db
 
 # Misc
 *.log
+
+# Project specific
+backend/uploads/
+frontend/dist/
