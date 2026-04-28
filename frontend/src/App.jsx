@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import './App.css';
 
 // Components
@@ -11,6 +12,7 @@ import ELNEditor from './pages/ELNEditor';
 import LIMS from './pages/LIMS';
 import Members from './pages/Members';
 import Settings from './pages/Settings';
+import AuditLogs from './pages/AuditLogs';
 
 import useAuthStore from './store/useAuthStore';
 
@@ -26,6 +28,7 @@ const ProtectedRoute = ({ children }) => {
 function App() {
   return (
     <BrowserRouter>
+      <Toaster position="top-right" toastOptions={{ duration: 3000, style: { background: 'var(--surface-color)', color: 'var(--text-main)', border: '1px solid var(--border-color)' } }} />
       <Routes>
         <Route path="/login" element={<Login />} />
         
@@ -45,6 +48,7 @@ function App() {
           <Route path="lims" element={<LIMS />} />
           <Route path="members" element={<Members />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="audit" element={<AuditLogs />} />
         </Route>
         
         {/* 알 수 없는 경로는 대시보드로 이동 */}

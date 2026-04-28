@@ -7,7 +7,23 @@ const router = express.Router();
 // GET /api/stats — 대시보드용 통합 통계
 router.get('/', async (req, res) => {
   try {
-    const notes = await ElnNote.find({ isTemplate: { $ne: true } }).sort({ createdAt: -1 });
+    const { startDate, endDate } = req.query;
+    let query = { isTemplate: { $ne: true } };
+    
+    if (startDate && endDate) {
+      // Set time to beginning of start date and end of end date
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      
+      query.createdAt = {
+        $gte: start,
+        $lte: end
+      };
+    }
+
+    const notes = await ElnNote.find(query).sort({ createdAt: -1 });
     const items = await LimsItem.find();
 
     // 1. 결재 현황 (파이 차트용)

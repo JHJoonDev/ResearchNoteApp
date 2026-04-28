@@ -11,6 +11,7 @@ import notificationRoutes from './routes/notifications.js';
 import statsRoutes from './routes/stats.js';
 import uploadRoutes from './routes/upload.js';
 import searchRoutes from './routes/search.js';
+import auditRoutes from './routes/audit.js';
 
 dotenv.config();
 
@@ -116,6 +117,7 @@ app.use('/api/notifications', authMiddleware, notificationRoutes);
 app.use('/api/stats', authMiddleware, statsRoutes);
 app.use('/api/upload', authMiddleware, uploadRoutes);
 app.use('/api/search', authMiddleware, searchRoutes);
+app.use('/api/audit', authMiddleware, auditRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Backend is running' });

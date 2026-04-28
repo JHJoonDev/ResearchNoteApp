@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
+import toast from 'react-hot-toast';
 import useAppStore from '../store/useAppStore';
 import useAuthStore from '../store/useAuthStore';
 
@@ -96,7 +97,7 @@ const loadNote = async () => {
       setHistory(note.history || []);
       setComments(note.comments || []);
     } else {
-      alert('노트를 불러올 수 없습니다.');
+      toast.error('노트를 불러올 수 없습니다.');
       navigate('/eln');
     }
     setIsLoading(false);
@@ -130,7 +131,7 @@ const loadNote = async () => {
 
   const handleSave = async () => {
     if (!title) {
-      alert('제목을 입력해 주세요.');
+      toast.error('제목을 입력해 주세요.');
       return;
     }
 
@@ -152,17 +153,17 @@ const loadNote = async () => {
       } else {
         await createElnNote({ ...noteData, history: [] });
       }
-      alert('저장되었습니다.');
+      toast.success('저장되었습니다.');
       navigate('/eln');
     } catch (err) {
-      alert('저장 도중 오류가 발생했습니다.');
+      toast.error('저장 도중 오류가 발생했습니다.');
     }
     setIsLoading(false);
   };
 
   const handleSaveAsTemplate = async () => {
     if (!title) {
-      alert('템플릿 제목을 입력해 주세요 (현재 제목 기반으로 복사됩니다).');
+      toast.error('템플릿 제목을 입력해 주세요 (현재 제목 기반으로 복사됩니다).');
       return;
     }
     const noteData = {
@@ -179,9 +180,9 @@ const loadNote = async () => {
     setIsLoading(true);
     try {
       await createElnNote(noteData);
-      alert('템플릿으로 저장되었습니다.');
+      toast.success('템플릿으로 저장되었습니다.');
     } catch (err) {
-      alert('템플릿 저장 도중 오류가 발생했습니다.');
+      toast.error('템플릿 저장 도중 오류가 발생했습니다.');
     }
     setIsLoading(false);
   };
@@ -191,14 +192,14 @@ const loadNote = async () => {
       setTitle(v.title || title);
       setContent(v.content || '');
       setShowHistory(false);
-      alert(`버전 ${v.version} 내용이 에디터에 로드되었습니다. '저장하기'를 누르면 최종 반영됩니다.`);
+      toast.success(`버전 ${v.version} 내용이 에디터에 로드되었습니다. '저장하기'를 누르면 최종 반영됩니다.`);
     }
   };
 
   const handleExportPDF = () => {
     const element = document.getElementById('eln-printable-area');
     if (!element) {
-      alert('인쇄할 내용을 찾을 수 없습니다.');
+      toast.error('인쇄할 내용을 찾을 수 없습니다.');
       return;
     }
 
@@ -218,7 +219,7 @@ const loadNote = async () => {
     }).catch(err => {
       console.error("PDF Export failed", err);
       setIsLoading(false);
-      alert('PDF 생성 도중 오류가 발생했습니다.');
+      toast.error('PDF 생성 도중 오류가 발생했습니다.');
     });
   };
 
@@ -265,7 +266,7 @@ const loadNote = async () => {
           uploadedAt: new Date()
         }]);
       } else {
-        alert(`${file.name} 업로드에 실패했습니다.`);
+        toast.error(`${file.name} 업로드에 실패했습니다.`);
       }
     }
   };

@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import useAppStore from '../store/useAppStore';
 
 function LIMS() {
   const { limsData, loading, fetchLimsData, createLimsItem, updateLimsItem, deleteLimsItem } = useAppStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState('create');
-  const [editingId, setEditingId] = useState(null);
+  const [activeTab, setActiveTab] = useState('info');
+  const [selectedItem, setSelectedItem] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     brand: '',
@@ -23,6 +25,8 @@ function LIMS() {
 
   const handleOpenModal = (mode, item = null) => {
     setModalMode(mode);
+    setSelectedItem(item);
+    setActiveTab('info');
     if (mode === 'edit' && item) {
       setFormData({
         name: item.name,
@@ -33,7 +37,6 @@ function LIMS() {
         status: item.status,
         expiryDate: item.expiryDate || ''
       });
-      setEditingId(item.id);
     } else {
       setFormData({
         name: '',
@@ -44,7 +47,6 @@ function LIMS() {
         status: '양호',
         expiryDate: ''
       });
-      setEditingId(null);
     }
     setIsModalOpen(true);
   };
@@ -63,7 +65,7 @@ function LIMS() {
     if (modalMode === 'create') {
       await createLimsItem(formData);
     } else {
-      await updateLimsItem(editingId, formData);
+      await updateLimsItem(selectedItem?.id, formData);
     }
     handleCloseModal();
   };
@@ -71,6 +73,7 @@ function LIMS() {
   const handleDelete = async (id) => {
     if (window.confirm('정말 삭제하시겠습니까?')) {
       await deleteLimsItem(id);
+      toast.success('삭제되었습니다.');
     }
   };
 
@@ -86,7 +89,7 @@ function LIMS() {
   });
 
   const handleExportCSV = () => {
-    if (limsData.length === 0) return alert('내보낼 데이터가 없습니다.');
+    if (limsData.length === 0) return toast.error('내보낼 데이터가 없습니다.');
     const headers = ['시약명', '제조사', 'Cas No.', '재고량', '단위', '상태', '만료일'];
     const csvContent = [
       headers.join(','),
@@ -227,61 +230,116 @@ function LIMS() {
         <div className="modal-overlay">
           <div className="modal-content">
             <div className="modal-header">
-              <h2>{modalMode === 'create' ? '새 시약 등록' : '시약 정보 수정'}</h2>
+              <h2>{modalMode === 'create' ? '새 시약 등록' : '시약 정보 및 이력'}</h2>
               <button className="close-btn" onClick={handleCloseModal}>&times;</button>
             </div>
-            <form onSubmit={handleSave}>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label>시약명</label>
-                  <input type="text" name="name" className="form-input" value={formData.name} onChange={handleInputChange} required />
-                </div>
-                <div className="form-group">
-                  <label>제조사</label>
-                  <input type="text" name="brand" className="form-input" value={formData.brand} onChange={handleInputChange} />
-                </div>
-                <div className="form-group">
-                  <label>Cas No.</label>
-                  <input type="text" name="cas" className="form-input" value={formData.cas} onChange={handleInputChange} />
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem' }}>
-                  <div className="form-group">
-                    <label>재고량 (숫자만)</label>
-                    <input type="number" name="stockValue" className="form-input" value={formData.stockValue} onChange={handleInputChange} required />
-                  </div>
-                  <div className="form-group">
-                    <label>단위</label>
-                    <select name="unit" className="form-input" value={formData.unit} onChange={handleInputChange}>
-                      <option value="L">L</option>
-                      <option value="mL">mL</option>
-                      <option value="kg">kg</option>
-                      <option value="g">g</option>
-                      <option value="mg">mg</option>
-                      <option value="ea">ea</option>
-                    </select>
-                  </div>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                  <div className="form-group">
-                    <label>상태</label>
-                    <select name="status" className="form-input" value={formData.status} onChange={handleInputChange}>
-                      <option value="양호">양호</option>
-                      <option value="부족">부족</option>
-                      <option value="만료 예정">만료 예정</option>
-                      <option value="만료">만료</option>
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>사용 만료 기한</label>
-                    <input type="date" name="expiryDate" className="form-input" value={formData.expiryDate} onChange={handleInputChange} style={{ fontFamily: 'inherit' }} />
-                  </div>
-                </div>
+            
+            {modalMode === 'edit' && (
+              <div style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid var(--border-color)', padding: '0 1.5rem', marginBottom: '1rem' }}>
+                <button 
+                  type="button"
+                  style={{ padding: '0.75rem 0', background: 'none', border: 'none', borderBottom: activeTab === 'info' ? '2px solid var(--primary-color)' : '2px solid transparent', color: activeTab === 'info' ? 'var(--primary-color)' : 'var(--text-muted)', fontWeight: activeTab === 'info' ? '600' : '500', cursor: 'pointer' }}
+                  onClick={() => setActiveTab('info')}
+                >
+                  기본 정보
+                </button>
+                <button 
+                  type="button"
+                  style={{ padding: '0.75rem 0', background: 'none', border: 'none', borderBottom: activeTab === 'history' ? '2px solid var(--primary-color)' : '2px solid transparent', color: activeTab === 'history' ? 'var(--primary-color)' : 'var(--text-muted)', fontWeight: activeTab === 'history' ? '600' : '500', cursor: 'pointer' }}
+                  onClick={() => setActiveTab('history')}
+                >
+                  입출고 이력
+                </button>
               </div>
-              <div className="modal-footer">
-                <button type="button" className="btn-secondary" onClick={handleCloseModal}>취소</button>
-                <button type="submit" className="btn-primary">저장</button>
+            )}
+
+            {activeTab === 'info' ? (
+              <form onSubmit={handleSave}>
+                <div className="modal-body">
+                  <div className="form-group">
+                    <label>시약명</label>
+                    <input type="text" name="name" className="form-input" value={formData.name} onChange={handleInputChange} required />
+                  </div>
+                  <div className="form-group">
+                    <label>제조사</label>
+                    <input type="text" name="brand" className="form-input" value={formData.brand} onChange={handleInputChange} />
+                  </div>
+                  <div className="form-group">
+                    <label>Cas No.</label>
+                    <input type="text" name="cas" className="form-input" value={formData.cas} onChange={handleInputChange} />
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem' }}>
+                    <div className="form-group">
+                      <label>재고량 (숫자만)</label>
+                      <input type="number" name="stockValue" className="form-input" value={formData.stockValue} onChange={handleInputChange} required />
+                    </div>
+                    <div className="form-group">
+                      <label>단위</label>
+                      <select name="unit" className="form-input" value={formData.unit} onChange={handleInputChange}>
+                        <option value="L">L</option>
+                        <option value="mL">mL</option>
+                        <option value="kg">kg</option>
+                        <option value="g">g</option>
+                        <option value="mg">mg</option>
+                        <option value="ea">ea</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div className="form-group">
+                      <label>상태</label>
+                      <select name="status" className="form-input" value={formData.status} onChange={handleInputChange}>
+                        <option value="양호">양호</option>
+                        <option value="부족">부족</option>
+                        <option value="만료 예정">만료 예정</option>
+                        <option value="만료">만료</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>사용 만료 기한</label>
+                      <input type="date" name="expiryDate" className="form-input" value={formData.expiryDate} onChange={handleInputChange} style={{ fontFamily: 'inherit' }} />
+                    </div>
+                  </div>
+                </div>
+                <div className="modal-footer">
+                  <button type="button" className="btn-secondary" onClick={handleCloseModal}>취소</button>
+                  <button type="submit" className="btn-primary">저장</button>
+                </div>
+              </form>
+            ) : (
+              <div className="modal-body" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+                <table className="data-table" style={{ fontSize: '0.9rem' }}>
+                  <thead>
+                    <tr>
+                      <th>일시</th>
+                      <th>유형</th>
+                      <th>수량</th>
+                      <th>작업자</th>
+                      <th>사유</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedItem?.history?.length > 0 ? (
+                      selectedItem.history.map((h, idx) => (
+                        <tr key={idx}>
+                          <td>{new Date(h.date).toLocaleString()}</td>
+                          <td>
+                            <span className={`status-${h.action === '입고' ? 'done' : 'warning'}`} style={{ padding: '0.2rem 0.5rem', borderRadius: '12px', fontSize: '0.8rem' }}>
+                              {h.action}
+                            </span>
+                          </td>
+                          <td>{h.amount} {selectedItem.unit}</td>
+                          <td>{h.user}</td>
+                          <td>{h.reason || '-'}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr><td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-muted)' }}>기록이 없습니다.</td></tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
-            </form>
+            )}
           </div>
         </div>
       )}

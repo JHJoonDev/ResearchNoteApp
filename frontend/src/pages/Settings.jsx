@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import useAppStore from '../store/useAppStore';
 
 function Settings() {
@@ -39,7 +40,7 @@ function Settings() {
     await updateSettings(formData);
     useAppStore.getState().setTheme(formData.theme);
     setIsSaving(false);
-    alert('설정이 저장되었습니다.');
+    toast.success('설정이 저장되었습니다.');
   };
 
   if (!settings) {

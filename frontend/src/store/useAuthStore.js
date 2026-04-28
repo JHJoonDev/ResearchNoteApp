@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import axios from 'axios';
+import toast from 'react-hot-toast';
 
 const api = axios.create({
   baseURL: 'http://localhost:5000/api',
@@ -21,6 +22,8 @@ api.interceptors.response.use(
       localStorage.removeItem('user');
       window.location.href = '/login';
     }
+    const message = error.response?.data?.error || error.response?.data?.message || '서버 오류가 발생했습니다.';
+    toast.error(message);
     return Promise.reject(error);
   }
 );

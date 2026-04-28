@@ -106,6 +106,11 @@ function Layout() {
           </NavLink>
         </nav>
         <div className="bottom-menu">
+          {user?.role === 'admin' && (
+            <NavLink to="/audit" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+              <i className="fa-solid fa-clipboard-list"></i> 감사 로그
+            </NavLink>
+          )}
           <NavLink to="/settings" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
             <i className="fa-solid fa-gear"></i> 시스템 설정
           </NavLink>

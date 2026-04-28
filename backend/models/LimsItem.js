@@ -30,7 +30,14 @@ const limsItemSchema = new mongoose.Schema({
   expiryDate: {
     type: String,
     default: '',
-  }
+  },
+  history: [{
+    date: { type: Date, default: Date.now },
+    action: { type: String, enum: ['입고', '출고', '폐기', '수정'], required: true },
+    amount: { type: Number, required: true },
+    user: { type: String, required: true },
+    reason: { type: String, default: '' }
+  }]
 }, {
   timestamps: true,
 });

@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { body, validationResult } from 'express-validator';
 import User from '../models/User.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
+import { logAction } from './audit.js';
 
 const router = express.Router();
 
@@ -30,6 +31,8 @@ router.post('/login', [
         process.env.JWT_SECRET || 'fallback_secret_key',
         { expiresIn: '1d' }
       );
+      
+      await logAction(user.name, '로그인', '시스템', '성공적으로 로그인했습니다.');
 
       res.json({
         success: true,
@@ -77,7 +80,7 @@ router.post('/register', [
 });
 
 router.put('/profile', authMiddleware, async (req, res) => {
-  const { name, password, newPassword } = req.body;
+  const { name, password, newPassword, notificationSettings } = req.body;
   try {
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ success: false, message: '사용자를 찾을 수 없습니다.' });
@@ -90,10 +93,21 @@ router.put('/profile', authMiddleware, async (req, res) => {
       user.password = newPassword;
     }
 
+    if (notificationSettings) {
+      user.notificationSettings = { ...user.notificationSettings, ...notificationSettings };
+    }
+
     await user.save();
     res.json({
       success: true,
-      user: { id: user._id, name: user.name, email: user.email, role: user.role, elnRole: user.elnRole }
+      user: { 
+        id: user._id, 
+        name: user.name, 
+        email: user.email, 
+        role: user.role, 
+        elnRole: user.elnRole,
+        notificationSettings: user.notificationSettings
+      }
     });
   } catch (err) {
     res.status(500).json({ success: false, message: '프로필 업데이트 실패' });

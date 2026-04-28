@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import useAppStore from '../store/useAppStore';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import useAuthStore from '../store/useAuthStore';
 
 function ELN() {
@@ -34,19 +35,19 @@ function ELN() {
     
     // 권한 검사
     if (note.status === '진행중' && user?.elnRole !== '책임연구원') {
-      alert('1차 승인 권한이 없습니다. (요구 권한: 책임연구원)');
+      toast.error('1차 승인 권한이 없습니다. (요구 권한: 책임연구원)');
       return;
     }
     
     if (note.status === '1차 승인' && user?.elnRole !== '연구소장') {
-      alert('최종 승인 권한이 없습니다. (요구 권한: 연구소장)');
+      toast.error('최종 승인 권한이 없습니다. (요구 권한: 연구소장)');
       return;
     }
     
     // 중복 승인 방지
     if (note.status === '1차 승인' && note.approvals && note.approvals.length > 0) {
       if (note.approvals[0].name === user?.name) {
-        alert('이미 1차 승인을 완료하셨습니다. 다른 작업자가 최종 승인해야 합니다.');
+        toast.error('이미 1차 승인을 완료하셨습니다. 다른 작업자가 최종 승인해야 합니다.');
         return;
       }
     }
@@ -130,7 +131,7 @@ function ELN() {
   };
 
   const handleExportCSV = () => {
-    if (elnData.length === 0) return alert('내보낼 데이터가 없습니다.');
+    if (elnData.length === 0) return toast.error('내보낼 데이터가 없습니다.');
     const headers = ['노트 제목', '작성자', '작성일', '상태', '태그'];
     const csvContent = [
       headers.join(','),

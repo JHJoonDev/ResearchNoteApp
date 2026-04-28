@@ -21,7 +21,8 @@ router.get('/', async (req, res) => {
       unit: item.unit,
       stock: `${item.stockValue} ${item.unit}`,
       status: item.status,
-      expiryDate: item.expiryDate
+      expiryDate: item.expiryDate,
+      history: item.history
     }));
     
     res.json({
@@ -36,9 +37,16 @@ router.get('/', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
+    const userName = req.user ? req.user.name : '알 수 없음';
     const newItem = new LimsItem({
       ...req.body,
-      status: '양호'
+      status: '양호',
+      history: [{
+        action: '입고',
+        amount: req.body.stockValue,
+        user: userName,
+        reason: '초기 입고'
+      }]
     });
     const savedItem = await newItem.save();
     res.status(201).json({
@@ -59,7 +67,26 @@ router.post('/', async (req, res) => {
 
 router.put('/:id', async (req, res) => {
   try {
-    const updatedItem = await LimsItem.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const userName = req.user ? req.user.name : '알 수 없음';
+    const oldItem = await LimsItem.findById(req.params.id);
+    let historyUpdate = req.body.history || [];
+    
+    if (oldItem && req.body.stockValue !== undefined && req.body.stockValue !== oldItem.stockValue) {
+      const diff = req.body.stockValue - oldItem.stockValue;
+      historyUpdate = [...oldItem.history, {
+        action: diff > 0 ? '입고' : '출고',
+        amount: Math.abs(diff),
+        user: userName,
+        reason: req.body.reason || (diff > 0 ? '재고 추가' : '사용 차감')
+      }];
+    }
+
+    const updateData = { ...req.body };
+    if (historyUpdate.length > 0) {
+      updateData.history = historyUpdate;
+    }
+
+    const updatedItem = await LimsItem.findByIdAndUpdate(req.params.id, updateData, { new: true });
     res.json({
       id: updatedItem._id,
       name: updatedItem.name,

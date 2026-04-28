@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import useAppStore from '../store/useAppStore';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -11,13 +12,14 @@ const PIE_COLORS = ['#6366f1', '#f59e0b', '#10b981', '#ef4444'];
 
 function Dashboard() {
   const navigate = useNavigate();
+  const [dateRange, setDateRange] = React.useState({ start: '', end: '' });
   const { elnData, limsData, fetchElnData, fetchLimsData, dashboardStats, fetchDashboardStats, disposeReagent, orderReagent } = useAppStore();
 
   useEffect(() => {
     fetchElnData();
     fetchLimsData();
-    fetchDashboardStats();
-  }, [fetchElnData, fetchLimsData, fetchDashboardStats]);
+    fetchDashboardStats(dateRange.start, dateRange.end);
+  }, [fetchElnData, fetchLimsData, fetchDashboardStats, dateRange]);
 
   const handleNewNote = () => navigate('/eln');
 
@@ -25,12 +27,12 @@ function Dashboard() {
     if (action.includes('주문')) {
       if (window.confirm(`${item.name}의 구매 요청을 진행하시겠습니까?`)) {
         await orderReagent(item.id);
-        alert('구매 요청이 완료되었습니다.');
+        toast.success('구매 요청이 완료되었습니다.');
       }
     } else if (action.includes('폐기')) {
       if (window.confirm(`${item.name}의 폐기 처리를 진행하시겠습니까?`)) {
         await disposeReagent(item.id);
-        alert('폐기 처리가 완료되었습니다.');
+        toast.success('폐기 처리가 완료되었습니다.');
       }
     }
   };
@@ -63,7 +65,34 @@ function Dashboard() {
 
   return (
     <div className="dashboard-content">
-      <h1 className="page-title">대시보드</h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+        <h1 className="page-title" style={{ margin: 0 }}>대시보드</h1>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>조회 기간:</span>
+          <input 
+            type="date" 
+            className="form-input" 
+            style={{ padding: '0.4rem 0.6rem', fontSize: '0.85rem', width: 'auto' }}
+            value={dateRange.start}
+            onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+          />
+          <span style={{ color: 'var(--text-muted)' }}>~</span>
+          <input 
+            type="date" 
+            className="form-input" 
+            style={{ padding: '0.4rem 0.6rem', fontSize: '0.85rem', width: 'auto' }}
+            value={dateRange.end}
+            onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+          />
+          <button 
+            className="btn-outline" 
+            style={{ padding: '0.4rem 0.6rem', fontSize: '0.85rem' }}
+            onClick={() => setDateRange({ start: '', end: '' })}
+          >
+            초기화
+          </button>
+        </div>
+      </div>
 
       {/* KPI Cards */}
       <div className="kpi-cards">

@@ -1,5 +1,6 @@
 import express from 'express';
 import Settings from '../models/Settings.js';
+import { logAction } from './audit.js';
 
 const router = express.Router();
 
@@ -26,6 +27,10 @@ router.put('/', async (req, res) => {
       Object.assign(settings, req.body);
     }
     await settings.save();
+    
+    const userName = req.user ? req.user.name : '시스템';
+    await logAction(userName, '수정', '시스템 설정', '시스템 설정 변경');
+
     res.json(settings);
   } catch (err) {
     res.status(400).json({ error: err.message });

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import useAuthStore from '../store/useAuthStore';
 
 function Login() {
@@ -21,13 +22,13 @@ function Login() {
       if (email && password && name) {
         const result = await register(email, password, name);
         if (result && result.success) {
-          alert('가입 신청이 완료되었습니다. 관리자 승인을 기다려주세요.');
+          toast.success('가입 신청이 완료되었습니다. 관리자 승인을 기다려주세요.');
           setIsRegisterMode(false);
         } else {
-          alert(result?.message || '회원가입 중 오류가 발생했습니다.');
+          toast.error(result?.message || '회원가입 중 오류가 발생했습니다.');
         }
       } else {
-        alert('모든 필드를 입력해주세요.');
+        toast.error('모든 필드를 입력해주세요.');
       }
     } else {
       if (email && password) {
@@ -36,7 +37,7 @@ function Login() {
           navigate('/');
         }
       } else {
-        alert('이메일과 비밀번호를 입력해주세요.');
+        toast.error('이메일과 비밀번호를 입력해주세요.');
       }
     }
   };

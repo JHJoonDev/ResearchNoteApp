@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import axios from 'axios';
+import toast from 'react-hot-toast';
 
 const api = axios.create({
   baseURL: 'http://localhost:5000/api',
@@ -21,6 +22,8 @@ api.interceptors.response.use(
       localStorage.removeItem('user');
       window.location.href = '/login';
     }
+    const message = error.response?.data?.error || error.response?.data?.message || '서버 오류가 발생했습니다.';
+    toast.error(message);
     return Promise.reject(error);
   }
 );
@@ -276,12 +279,16 @@ const useAppStore = create((set) => ({
     }
   },
 
-  fetchDashboardStats: async () => {
+  fetchDashboardStats: async (startDate, endDate) => {
     try {
-      const res = await api.get('/stats');
+      let url = '/stats';
+      if (startDate && endDate) {
+        url += `?startDate=${startDate}&endDate=${endDate}`;
+      }
+      const res = await api.get(url);
       set({ dashboardStats: res.data });
     } catch (err) {
-      console.error('Error fetching dashboard stats', err);
+      toast.error('통계 데이터 로드 실패');
     }
   },
 
