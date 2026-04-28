@@ -62,7 +62,7 @@ body {
   transition: background-color 0.4s ease, border-color 0.4s ease;
   width: 260px;
   background-color: var(--surface-color);
-  border-right: 1px solid var(--border-color);
+  border-right: border-bottom: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
   padding: 1.5rem 1rem;
@@ -115,7 +115,7 @@ body {
 
 .bottom-menu {
   margin-top: auto;
-  border-top: 1px solid var(--border-color);
+  border-top: border-bottom: 1px solid var(--border-color);
   padding-top: 1rem;
 }
 
@@ -130,7 +130,7 @@ body {
   transition: background-color 0.4s ease, border-color 0.4s ease;
   height: 70px;
   background-color: var(--surface-color);
-  border-bottom: 1px solid var(--border-color);
+ border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -286,7 +286,7 @@ body {
   align-items: center;
   margin-bottom: 1.5rem;
   padding-bottom: 1rem;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: border-bottom: 1px solid var(--border-color);
   background-color: transparent;
 }
 
@@ -451,7 +451,7 @@ body {
 .data-table th, .data-table td {
   padding: 1rem;
   text-align: left;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: border-bottom: 1px solid var(--border-color);
 }
 
 .data-table th {
@@ -641,7 +641,7 @@ body {
 
 .modal-header {
   padding: 1.5rem;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: border-bottom: 1px solid var(--border-color);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -679,7 +679,7 @@ body {
 .modal-footer {
   padding: 1.25rem 1.5rem;
   background-color: var(--bg-color);
-  border-top: 1px solid var(--border-color);
+  border-top: border-bottom: 1px solid var(--border-color);
   display: flex;
   justify-content: flex-end;
   gap: 0.75rem;
@@ -831,7 +831,7 @@ body {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
-  border-right: 1px solid var(--border-color);
+  border-right: border-bottom: 1px solid var(--border-color);
   padding: 2rem 4rem;
 }
 
@@ -850,17 +850,14 @@ body {
   align-items: center;
   margin-bottom: 2rem;
   padding-bottom: 1rem;
-  border-bottom: 1px solid var(--border-color);
-}
-
-  background: transparent;
+  border-bottom: border-bottom: 1px solid var(--border-color);
 }
 
 .editor-title-input::placeholder {
   color: #E5E7EB;
 }
 
--color: var(--surface-color);
+
 
 .editor-content-wrapper .ql-container.ql-snow {
   border: none !important;
@@ -876,7 +873,7 @@ body {
 
 .editor-content-wrapper .ql-toolbar.ql-snow {
   border: none;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: border-bottom: 1px solid var(--border-color);
   padding: 0.5rem 0;
 }
 
@@ -1130,7 +1127,7 @@ border-radius: 24px;}
 
 .chart-card .card-header {
   padding: 1rem 1.25rem;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: border-bottom: 1px solid var(--border-color);
 }
 
 .chart-card .card-header h2 {

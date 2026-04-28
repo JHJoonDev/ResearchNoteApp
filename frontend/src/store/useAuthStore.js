@@ -1,32 +1,5 @@
 import { create } from 'zustand';
-import axios from 'axios';
-import toast from 'react-hot-toast';
-
-const api = axios.create({
-  baseURL: 'http://localhost:5000/api',
-});
-
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response && error.response.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
-    }
-    const message = error.response?.data?.error || error.response?.data?.message || '서버 오류가 발생했습니다.';
-    toast.error(message);
-    return Promise.reject(error);
-  }
-);
+import api from '../api/axios';
 
 const useAuthStore = create((set) => ({
   user: null,
