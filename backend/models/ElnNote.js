@@ -9,6 +9,10 @@ const elnNoteSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  project: {
+    type: String,
+    default: '기본 프로젝트'
+  },
   status: {
     type: String,
     enum: ['진행중', '1차 승인', '승인됨', '반려'],
@@ -16,7 +20,8 @@ const elnNoteSchema = new mongoose.Schema({
   },
   approvals: [{
     name: String,
-    date: { type: Date, default: Date.now }
+    date: { type: Date, default: Date.now },
+    signature: String
   }],
   date: {
     type: String,

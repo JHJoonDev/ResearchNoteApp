@@ -1372,3 +1372,60 @@ border-radius: 24px;}
     display: none;
   }
 }
+
+/* ========================================= */
+/* --- Dark Mode Enhancements --- */
+/* ========================================= */
+
+[data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
+[data-theme="dark"] input[type="date"] {
+  color-scheme: dark;
+}
+
+/* React Big Calendar Dark Mode overrides */
+[data-theme="dark"] .rbc-calendar {
+  color: var(--text-main);
+}
+[data-theme="dark"] .rbc-month-view,
+[data-theme="dark"] .rbc-time-view,
+[data-theme="dark"] .rbc-agenda-view {
+  background-color: var(--surface-color);
+  border-color: var(--border-color);
+}
+[data-theme="dark"] .rbc-header,
+[data-theme="dark"] .rbc-month-row,
+[data-theme="dark"] .rbc-day-bg,
+[data-theme="dark"] .rbc-time-content,
+[data-theme="dark"] .rbc-time-header-content,
+[data-theme="dark"] .rbc-timeslot-group,
+[data-theme="dark"] .rbc-time-slot,
+[data-theme="dark"] .rbc-agenda-date-cell,
+[data-theme="dark"] .rbc-agenda-time-cell {
+  border-color: var(--border-color) !important;
+}
+[data-theme="dark"] .rbc-off-range-bg {
+  background-color: var(--bg-color);
+}
+[data-theme="dark"] .rbc-today {
+  background-color: rgba(56, 189, 248, 0.1);
+}
+[data-theme="dark"] .rbc-btn-group button {
+  color: var(--text-main) !important;
+  border-color: var(--border-color) !important;
+  background-color: var(--surface-color) !important;
+}
+[data-theme="dark"] .rbc-btn-group button:hover {
+  background-color: var(--bg-color) !important;
+}
+[data-theme="dark"] .rbc-btn-group button.rbc-active {
+  background-color: var(--primary-color) !important;
+  color: white !important;
+}
+[data-theme="dark"] .rbc-toolbar button {
+  color: var(--text-main);
+}
+[data-theme="dark"] .rbc-event {
+  color: white !important; 
+}

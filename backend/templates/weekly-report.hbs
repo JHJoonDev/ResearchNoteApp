@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>주간 연구 및 재고 보고서</title>
+  <style>
+    body { font-family: 'Malgun Gothic', sans-serif; line-height: 1.5; color: #333; margin: 40px; }
+    h1 { color: #0ea5e9; text-align: center; border-bottom: 2px solid #0ea5e9; padding-bottom: 10px; }
+    h2 { color: #0284c7; margin-top: 30px; }
+    .meta { text-align: right; font-size: 0.9em; color: #666; margin-bottom: 30px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+    th { background-color: #f0f9ff; font-weight: bold; }
+    .status-badge { display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 0.8em; font-weight: bold; }
+    .status-ok { background-color: #d1fae5; color: #065f46; }
+    .status-warn { background-color: #fef3c7; color: #92400e; }
+    .status-danger { background-color: #fee2e2; color: #991b1b; }
+    .note-card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 15px; background: #f8fafc; }
+    .note-card h3 { margin-top: 0; color: #0f172a; }
+  </style>
+</head>
+<body>
+  <h1>주간 연구 및 재고 보고서</h1>
+  <div class="meta">
+    <p>생성 일시: {{generatedAt}}</p>
+  </div>
+
+  <h2>1. 주간 연구노트 현황</h2>
+  {{#if notes.length}}
+    {{#each notes}}
+    <div class="note-card">
+      <h3>{{this.title}}</h3>
+      <p><strong>프로젝트:</strong> {{this.project}} | <strong>작성자:</strong> {{this.author}} | <strong>작성일:</strong> {{this.date}}</p>
+      <p><strong>상태:</strong> {{this.status}}</p>
+    </div>
+    {{/each}}
+  {{else}}
+    <p>이번 주 작성된 연구노트가 없습니다.</p>
+  {{/if}}
+
+  <h2>2. LIMS 시약 재고 현황 (임계치 미달 및 만료 예정)</h2>
+  {{#if items.length}}
+  <table>
+    <thead>
+      <tr>
+        <th>시약명</th>
+        <th>CAS 번호</th>
+        <th>현재 재고</th>
+        <th>상태</th>
+        <th>유효기간</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each items}}
+      <tr>
+        <td>{{this.name}}</td>
+        <td>{{this.cas}}</td>
+        <td>{{this.stockValue}} {{this.unit}}</td>
+        <td>
+          <span class="status-badge 
+            {{#if (eq this.status '양호')}}status-ok{{/if}}
+            {{#if (eq this.status '부족')}}status-warn{{/if}}
+            {{#if (eq this.status '만료 예정')}}status-warn{{/if}}
+            {{#if (eq this.status '만료')}}status-danger{{/if}}
+          ">
+            {{this.status}}
+          </span>
+        </td>
+        <td>{{this.expiryDate}}</td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+  {{else}}
+    <p>등록된 시약이 없습니다.</p>
+  {{/if}}
+</body>
+</html>

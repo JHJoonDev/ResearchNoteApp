@@ -12,6 +12,8 @@ function Settings() {
   });
   const [isSaving, setIsSaving] = useState(false);
 
+  const globalTheme = useAppStore((state) => state.theme);
+
   useEffect(() => {
     fetchSettings();
   }, [fetchSettings]);
@@ -22,13 +24,16 @@ function Settings() {
         labName: settings.labName || '',
         receiveEmailNotifications: settings.receiveEmailNotifications !== false,
         defaultElnRole: settings.defaultElnRole || 'researcher',
-        theme: settings.theme || 'light'
+        theme: globalTheme || 'light'
       });
     }
-  }, [settings]);
+  }, [settings, globalTheme]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    if (name === 'theme') {
+      useAppStore.getState().setTheme(value);
+    }
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value

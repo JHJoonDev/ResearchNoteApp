@@ -13,6 +13,8 @@ import LIMS from './pages/LIMS';
 import Members from './pages/Members';
 import Settings from './pages/Settings';
 import AuditLogs from './pages/AuditLogs';
+import CalendarView from './pages/CalendarView';
+import ReportGenerator from './pages/ReportGenerator';
 
 import useAuthStore from './store/useAuthStore';
 
@@ -49,6 +51,8 @@ function App() {
           <Route path="members" element={<Members />} />
           <Route path="settings" element={<Settings />} />
           <Route path="audit" element={<AuditLogs />} />
+          <Route path="calendar" element={<CalendarView />} />
+          <Route path="reports" element={<ReportGenerator />} />
         </Route>
         
         {/* 알 수 없는 경로는 대시보드로 이동 */}

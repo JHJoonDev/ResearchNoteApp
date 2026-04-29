@@ -9,6 +9,7 @@ const useAppStore = create((set) => ({
   limsPagination: { page: 1, totalPages: 1 },
   membersData: [],
   notifications: [],
+  auditLogs: [],
   dashboardStats: null,
   theme: localStorage.getItem('theme') || 'light',
   loading: false,
@@ -97,6 +98,19 @@ const useAppStore = create((set) => ({
       const res = await api.put(`/eln/${id}`, payload);
       set((state) => ({
         elnData: state.elnData.map((note) => (note.id === id ? { ...note, status: res.data.status, approvals: res.data.approvals } : note)),
+      }));
+      return res.data;
+    } catch (err) {
+      console.error(err);
+    }
+  },
+
+  updateElnStatus: async (id, status, approverName, signature) => {
+    try {
+      const payload = { status, approverName, signature };
+      const res = await api.put(`/eln/${id}`, payload);
+      set((state) => ({
+        elnData: state.elnData.map((note) => (note.id === id ? res.data : note)),
       }));
       return res.data;
     } catch (err) {
@@ -272,6 +286,15 @@ const useAppStore = create((set) => ({
       set({ notifications: res.data });
     } catch (err) {
       console.error('Error fetching notifications', err);
+    }
+  },
+
+  fetchAuditLogs: async () => {
+    try {
+      const res = await api.get('/audit', { params: { limit: 10 }, hideToast: true });
+      set({ auditLogs: res.data.logs });
+    } catch (err) {
+      console.error('Error fetching audit logs', err);
     }
   },
 

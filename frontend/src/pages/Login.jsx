@@ -8,6 +8,22 @@ function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [tenants, setTenants] = useState([]);
+  const [selectedTenant, setSelectedTenant] = useState('');
+  
+  React.useEffect(() => {
+    const fetchTenants = async () => {
+      try {
+        const res = await fetch('/api/auth/tenants'); // I need to create this route or use /api/tenants
+        const data = await res.json();
+        if (Array.isArray(data)) setTenants(data);
+      } catch (e) {
+        console.error('Failed to fetch tenants', e);
+      }
+    };
+    fetchTenants();
+  }, []);
+
   
   const navigate = useNavigate();
   
@@ -32,7 +48,7 @@ function Login() {
       }
     } else {
       if (email && password) {
-        const success = await login(email, password);
+        const success = await login(email, password, selectedTenant);
         if (success) {
           navigate('/');
         }
@@ -54,6 +70,22 @@ function Login() {
             LabHub — AI 업무 자동화 연구 플랫폼
           </p>
         </div>
+
+        {!isRegisterMode && (
+          <div style={{ marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <label style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-main)' }}>연구소(테넌트) 선택</label>
+            <select 
+              value={selectedTenant}
+              onChange={(e) => setSelectedTenant(e.target.value)}
+              style={{ padding: '0.875rem 1rem', borderRadius: '12px', border: '1px solid var(--border-color)', fontSize: '0.95rem', background: 'var(--surface-color)', color: 'var(--text-main)' }}
+            >
+              <option value="">테넌트를 선택하세요</option>
+              {tenants.map(t => (
+                <option key={t._id} value={t._id}>{t.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           

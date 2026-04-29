@@ -1,5 +1,18 @@
 import express from 'express';
 import User from '../models/User.js';
+import { requireRole } from '../middleware/authMiddleware.js';
+import { body, validationResult } from 'express-validator';
+
+const validateMember = [
+  body('name').notEmpty().withMessage('이름을 입력하세요.'),
+  body('email').isEmail().withMessage('유효한 이메일을 입력하세요.'),
+  body('role').isIn(['admin', 'researcher', 'viewer']).withMessage('올바른 권한을 선택하세요.'),
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
+    next();
+  }
+];
 
 const router = express.Router();
 
@@ -19,7 +32,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.post('/', async (req, res) => {
+router.post('/', requireRole(['admin']), validateMember, async (req, res) => {
   try {
     const newMember = new User({
       ...req.body,
@@ -38,7 +51,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-router.put('/:id', async (req, res) => {
+router.put('/:id', requireRole(['admin']), validateMember, async (req, res) => {
   try {
     const updatedMember = await User.findByIdAndUpdate(req.params.id, req.body, { new: true });
     res.json({
@@ -53,7 +66,7 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireRole(['admin']), async (req, res) => {
   try {
     await User.findByIdAndDelete(req.params.id);
     res.json({ message: '삭제 완료' });

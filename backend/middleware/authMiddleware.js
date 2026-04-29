@@ -15,3 +15,21 @@ export const authMiddleware = (req, res, next) => {
     return res.status(401).json({ error: '유효하지 않은 토큰입니다.' });
   }
 };
+
+export const requireRole = (roles) => {
+  return (req, res, next) => {
+    if (!req.user || !roles.includes(req.user.role)) {
+      return res.status(403).json({ success: false, message: '시스템 접근 권한이 없습니다.' });
+    }
+    next();
+  };
+};
+
+export const requireElnRole = (elnRoles) => {
+  return (req, res, next) => {
+    if (!req.user || !elnRoles.includes(req.user.elnRole)) {
+      return res.status(403).json({ success: false, message: 'ELN 접근 권한이 없습니다.' });
+    }
+    next();
+  };
+};

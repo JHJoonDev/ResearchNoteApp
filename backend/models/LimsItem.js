@@ -17,6 +17,10 @@ const limsItemSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
+  threshold: {
+    type: Number,
+    default: 5,
+  },
   unit: {
     type: String,
     default: 'L',

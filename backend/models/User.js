@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
 
 const userSchema = new mongoose.Schema({
+  tenantId: { type: mongoose.Schema.Types.ObjectId, ref: 'Tenant' },
   email: {
     type: String,
     required: true,
@@ -33,6 +34,10 @@ const userSchema = new mongoose.Schema({
       approvalDone: { type: Boolean, default: true },
       inventoryAlert: { type: Boolean, default: true }
     }
+  },
+  isFirstLogin: {
+    type: Boolean,
+    default: true
   }
 }, {
   timestamps: true,

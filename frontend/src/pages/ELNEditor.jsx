@@ -5,6 +5,7 @@ import 'react-quill-new/dist/quill.snow.css';
 import toast from 'react-hot-toast';
 import useAppStore from '../store/useAppStore';
 import useAuthStore from '../store/useAuthStore';
+import HtmlDiff from 'htmldiff-js';
 
 function ELNEditor() {
   const { id } = useParams();
@@ -27,6 +28,7 @@ function ELNEditor() {
   const userName = user?.name || '연구원';
 
   const [title, setTitle] = useState('');
+  const [project, setProject] = useState('기본 프로젝트');
   const [content, setContent] = useState('');
   const [reagentsUsed, setReagentsUsed] = useState([]);
   const [attachments, setAttachments] = useState([]);
@@ -34,6 +36,7 @@ function ELNEditor() {
   const [tags, setTags] = useState([]);
   const [tagInput, setTagInput] = useState('');
   const [history, setHistory] = useState([]);
+  const [approvals, setApprovals] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isPreview, setIsPreview] = useState(false);
   const [lastAutoSaved, setLastAutoSaved] = useState(null);
@@ -65,6 +68,7 @@ function ELNEditor() {
     const template = await fetchSingleNote(templateId);
     if (template) {
       setTitle(`${template.title} (복사본)`);
+      setProject(template.project || '기본 프로젝트');
       setContent(template.content || '');
       // 템플릿의 소모 시약, 첨부파일은 가져갈 수 있도록 하되 상태는 진행중으로 리셋
       setReagentsUsed(template.reagentsUsed || []);
@@ -89,12 +93,14 @@ const loadNote = async () => {
     const note = await fetchSingleNote(id);
     if (note) {
       setTitle(note.title);
+      setProject(note.project || '기본 프로젝트');
       setContent(note.content || '');
       setReagentsUsed(note.reagentsUsed || []);
       setAttachments(note.attachments || []);
       setStatus(note.status);
       setTags(note.tags || []);
       setHistory(note.history || []);
+      setApprovals(note.approvals || []);
       setComments(note.comments || []);
     } else {
       toast.error('노트를 불러올 수 없습니다.');
@@ -115,7 +121,7 @@ const loadNote = async () => {
   };
 
   const handleAutoSave = async () => {
-    const noteData = { title, author: userName, content, reagentsUsed, attachments, status, editorName: userName, tags };
+    const noteData = { title, project, author: userName, content, reagentsUsed, attachments, status, editorName: userName, tags };
     try {
       if (isEditMode) {
         await updateElnNote(id, noteData);
@@ -137,6 +143,7 @@ const loadNote = async () => {
 
     const noteData = {
       title,
+      project,
       author: userName,
       content,
       reagentsUsed,
@@ -168,6 +175,7 @@ const loadNote = async () => {
     }
     const noteData = {
       title: `${title} (템플릿)`,
+      project,
       author: userName,
       content,
       reagentsUsed,
@@ -194,6 +202,23 @@ const loadNote = async () => {
       setShowHistory(false);
       toast.success(`버전 ${v.version} 내용이 에디터에 로드되었습니다. '저장하기'를 누르면 최종 반영됩니다.`);
     }
+  };
+
+  const handleCompareDiff = (v) => {
+    const diffHtml = HtmlDiff.execute(v.content || '', content || '');
+    const win = window.open('', '_blank');
+    win.document.write(`<html><head><title>Diff: Version ${v.version} vs Current</title>
+      <style>
+        body { font-family: sans-serif; padding: 40px; line-height: 1.6; color: #333; }
+        .diff { border: 1px solid #ddd; padding: 20px; border-radius: 8px; background: #fff; }
+        del { background-color: #fecdd3; text-decoration: line-through; color: #9f1239; }
+        ins { background-color: #dcfce7; text-decoration: none; color: #166534; }
+      </style>
+    </head><body>
+      <h2>📝 변경점 비교 (Version ${v.version} ➔ 현재 내용)</h2>
+      <p style="color: #666; font-size: 0.9em;">빨간색 취소선은 삭제된 내용, 초록색 배경은 추가된 내용입니다.</p>
+      <div class="diff">${diffHtml}</div>
+    </body></html>`);
   };
 
   const handleExportPDF = () => {
@@ -345,6 +370,21 @@ const loadNote = async () => {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+          {/* Use input with datalist to allow both selecting existing projects and typing new ones */}
+          <input 
+            type="text"
+            list="project-list"
+            className="form-input" 
+            value={project} 
+            onChange={(e) => setProject(e.target.value)}
+            style={{ width: '180px', marginBottom: 0 }}
+            placeholder="프로젝트 명 (선택/입력)"
+          />
+          <datalist id="project-list">
+            {Array.from(new Set(elnData.map(n => n.project || '기본 프로젝트'))).map(p => (
+              <option key={p} value={p} />
+            ))}
+          </datalist>
           <input 
             type="text" 
             className="editor-title-input" 
@@ -424,6 +464,30 @@ const loadNote = async () => {
               style={{ padding: '1.5rem', minHeight: '500px' }}
             >
             </div>
+            {/* 결재 이력 및 서명 표시 */}
+            {approvals.length > 0 && (
+              <div style={{ padding: '1.5rem', borderTop: '1px solid var(--border-color)', marginTop: 'auto', pageBreakInside: 'avoid' }}>
+                <h3 style={{ fontSize: '1rem', marginBottom: '1rem' }}>결재 및 서명 이력</h3>
+                <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+                  {approvals.map((appr, idx) => (
+                    <div key={idx} style={{ border: '1px solid var(--border-color)', borderRadius: '8px', padding: '1rem', background: '#fff', width: '200px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
+                        {idx === 0 ? '1차 승인' : '최종 승인'}
+                      </div>
+                      <div style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>{appr.name}</div>
+                      {appr.signature ? (
+                        <img src={appr.signature} alt="서명" style={{ maxWidth: '100%', height: '50px', objectFit: 'contain' }} />
+                      ) : (
+                        <div style={{ height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '0.8rem', fontStyle: 'italic' }}>서명 없음</div>
+                      )}
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
+                        {new Date(appr.date).toLocaleString()}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {!isPreview && (
@@ -656,13 +720,20 @@ const loadNote = async () => {
                     <strong>수정자:</strong> {h.updatedBy || '알 수 없음'} <br/>
                     <strong>제목:</strong> {h.title}
                   </div>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                     <button 
                       className="btn-outline" 
                       style={{ fontSize: '0.75rem', padding: '0.3rem 0.6rem', flex: 1 }}
                       onClick={() => handleRestoreVersion(h)}
                     >
-                      <i className="fa-solid fa-undo"></i> 복원하기
+                      <i className="fa-solid fa-undo"></i> 복원
+                    </button>
+                    <button 
+                      className="btn-outline" 
+                      style={{ fontSize: '0.75rem', padding: '0.3rem 0.6rem', flex: 1 }}
+                      onClick={() => handleCompareDiff(h)}
+                    >
+                      <i className="fa-solid fa-code-compare"></i> Diff 비교
                     </button>
                     <button 
                       className="btn-outline" 
@@ -672,7 +743,7 @@ const loadNote = async () => {
                         win.document.write(`<html><head><title>Version ${h.version} Preview</title><style>body{font-family:sans-serif;padding:40px;} .content{border:1px solid #ddd;padding:20px;}</style></head><body><h1>${h.title}</h1><div class="content">${h.content}</div></body></html>`);
                       }}
                     >
-                      <i className="fa-solid fa-eye"></i> 내용 보기
+                      <i className="fa-solid fa-eye"></i> 보기
                     </button>
                   </div>
                 </div>

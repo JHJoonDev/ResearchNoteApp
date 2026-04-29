@@ -2,6 +2,7 @@ import express from 'express';
 import jwt from 'jsonwebtoken';
 import { body, validationResult } from 'express-validator';
 import User from '../models/User.js';
+import Tenant from '../models/Tenant.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 import { logAction } from './audit.js';
 
@@ -16,10 +17,13 @@ router.post('/login', [
     return res.status(400).json({ success: false, errors: errors.array(), message: errors.array()[0].msg });
   }
 
-  const { email, password } = req.body;
+  const { email, password, tenantId } = req.body;
   
   try {
-    const user = await User.findOne({ email });
+    const query = { email };
+    if (tenantId) query.tenantId = tenantId;
+    
+    const user = await User.findOne(query);
     if (!user) {
       return res.status(401).json({ success: false, message: '이메일 또는 비밀번호가 잘못되었습니다.' });
     }
@@ -27,7 +31,7 @@ router.post('/login', [
     const isMatch = await user.comparePassword(password);
     if (isMatch) {
       const token = jwt.sign(
-        { id: user._id, role: user.role, elnRole: user.elnRole },
+        { id: user._id, role: user.role, elnRole: user.elnRole, tenantId: user.tenantId },
         process.env.JWT_SECRET || 'fallback_secret_key',
         { expiresIn: '1d' }
       );
@@ -42,7 +46,8 @@ router.post('/login', [
           name: user.name,
           email: user.email,
           role: user.role,
-          elnRole: user.elnRole || '연구원'
+          elnRole: user.elnRole || '연구원',
+          isFirstLogin: user.isFirstLogin
         }
       });
     } else {
@@ -91,6 +96,7 @@ router.put('/profile', authMiddleware, async (req, res) => {
       const isMatch = await user.comparePassword(password);
       if (!isMatch) return res.status(400).json({ success: false, message: '현재 비밀번호가 일치하지 않습니다.' });
       user.password = newPassword;
+      user.isFirstLogin = false;
     }
 
     if (notificationSettings) {
@@ -106,6 +112,7 @@ router.put('/profile', authMiddleware, async (req, res) => {
         email: user.email, 
         role: user.role, 
         elnRole: user.elnRole,
+        isFirstLogin: user.isFirstLogin,
         notificationSettings: user.notificationSettings
       }
     });
@@ -116,6 +123,15 @@ router.put('/profile', authMiddleware, async (req, res) => {
 
 router.post('/logout', (req, res) => {
   res.json({ success: true, message: '로그아웃 되었습니다.' });
+});
+
+router.get('/tenants', async (req, res) => {
+  try {
+    const tenants = await Tenant.find({}, 'name');
+    res.json(tenants);
+  } catch (err) {
+    res.status(500).json({ success: false, message: '테넌트 조회 실패' });
+  }
 });
 
 export default router;

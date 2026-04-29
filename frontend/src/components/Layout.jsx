@@ -3,6 +3,8 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import useAuthStore from '../store/useAuthStore';
 import useAppStore from '../store/useAppStore';
 import ProfileModal from './ProfileModal';
+import { io } from 'socket.io-client';
+import toast from 'react-hot-toast';
 
 function Layout() {
   const navigate = useNavigate();
@@ -33,11 +35,20 @@ function Layout() {
   useEffect(() => {
     if (user) {
       fetchNotifications(user.name, user.elnRole);
-      // Periodically check for notifications every 30 seconds
-      const interval = setInterval(() => {
-        fetchNotifications(user.name, user.elnRole);
-      }, 30000);
-      return () => clearInterval(interval);
+      
+      const socketUrl = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'http://localhost:5000';
+      const socket = io(socketUrl);
+      
+      socket.on('newNotification', (notif) => {
+        if (notif.recipient === user.name || notif.recipient === user.elnRole || notif.recipient === '전체') {
+          fetchNotifications(user.name, user.elnRole);
+          toast(`새 알림: ${notif.message}`, { icon: '🔔' });
+        }
+      });
+
+      return () => {
+        socket.disconnect();
+      };
     }
   }, [user, fetchNotifications]);
 
@@ -98,11 +109,17 @@ function Layout() {
           <NavLink to="/eln" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
             <i className="fa-solid fa-book-journal-whills"></i> 연구노트 (ELN)
           </NavLink>
+          <NavLink to="/calendar" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+            <i className="fa-regular fa-calendar"></i> 일정 캘린더
+          </NavLink>
           <NavLink to="/lims" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
             <i className="fa-solid fa-vials"></i> 시약 관리 (LIMS)
           </NavLink>
           <NavLink to="/members" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setSidebarOpen(false)}>
             <i className="fa-solid fa-users"></i> 연구실 멤버
+          </NavLink>
+          <NavLink to="/reports" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setSidebarOpen(false)}>
+            <i className="fa-solid fa-file-invoice"></i> 주간 보고서
           </NavLink>
         </nav>
         <div className="bottom-menu">
@@ -250,7 +267,7 @@ function Layout() {
         <Outlet />
       </main>
       
-      {showProfileModal && <ProfileModal onClose={() => setShowProfileModal(false)} />}
+      { (showProfileModal || user?.isFirstLogin) && <ProfileModal onClose={() => setShowProfileModal(false)} /> }
     </div>
   );
 }

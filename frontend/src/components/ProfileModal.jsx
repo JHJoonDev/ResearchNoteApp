@@ -29,7 +29,12 @@ function ProfileModal({ onClose }) {
     setError('');
     setSuccess('');
 
-    if (formData.newPassword !== formData.confirmPassword) {
+    if (user.isFirstLogin && (!formData.password || !formData.newPassword)) {
+      setError('초기 비밀번호를 변경해야 합니다.');
+      return;
+    }
+
+    if (formData.newPassword && formData.newPassword !== formData.confirmPassword) {
       setError('새 비밀번호가 일치하지 않습니다.');
       return;
     }
@@ -57,8 +62,8 @@ function ProfileModal({ onClose }) {
     <div className="modal-overlay">
       <div className="modal-content">
         <div className="modal-header">
-          <h2>프로필 설정</h2>
-          <button className="close-btn" onClick={onClose}>&times;</button>
+          <h2>{user?.isFirstLogin ? '최초 로그인 - 비밀번호 변경' : '프로필 설정'}</h2>
+          {!user?.isFirstLogin && <button className="close-btn" onClick={onClose}>&times;</button>}
         </div>
         <form onSubmit={handleSubmit}>
           <div className="modal-body">
@@ -71,7 +76,9 @@ function ProfileModal({ onClose }) {
             </div>
             
             <hr style={{ margin: '1.5rem 0', borderColor: 'var(--border-color)' }} />
-            <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>비밀번호 변경 시에만 아래 항목을 입력하세요.</p>
+            <p style={{ fontSize: '0.9rem', color: user?.isFirstLogin ? 'var(--danger)' : 'var(--text-muted)', marginBottom: '1rem', fontWeight: user?.isFirstLogin ? 'bold' : 'normal' }}>
+              {user?.isFirstLogin ? '보안을 위해 초기 비밀번호를 변경해 주세요.' : '비밀번호 변경 시에만 아래 항목을 입력하세요.'}
+            </p>
             
             <div className="form-group">
               <label>현재 비밀번호</label>
@@ -115,7 +122,7 @@ function ProfileModal({ onClose }) {
             </div>
           </div>
           <div className="modal-footer">
-            <button type="button" className="btn-secondary" onClick={onClose}>취소</button>
+            {!user?.isFirstLogin && <button type="button" className="btn-secondary" onClick={onClose}>취소</button>}
             <button type="submit" className="btn-primary" disabled={loading}>저장</button>
           </div>
         </form>

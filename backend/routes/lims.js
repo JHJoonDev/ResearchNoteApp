@@ -1,5 +1,19 @@
 import express from 'express';
 import LimsItem from '../models/LimsItem.js';
+import { requireRole } from '../middleware/authMiddleware.js';
+import { body, validationResult } from 'express-validator';
+import { logAction } from './audit.js';
+
+const validateLims = [
+  body('name').notEmpty().withMessage('시약명을 입력하세요.'),
+  body('stockValue').isNumeric().withMessage('재고량은 숫자여야 합니다.'),
+  body('unit').notEmpty().withMessage('단위를 입력하세요.'),
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
+    next();
+  }
+];
 
 const router = express.Router();
 
@@ -35,7 +49,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.post('/', async (req, res) => {
+router.post('/', requireRole(['admin', 'researcher']), validateLims, async (req, res) => {
   try {
     const userName = req.user ? req.user.name : '알 수 없음';
     const newItem = new LimsItem({
@@ -49,6 +63,7 @@ router.post('/', async (req, res) => {
       }]
     });
     const savedItem = await newItem.save();
+    await logAction(userName, '등록', '시약', `새 시약 등록: ${savedItem.name}`);
     res.status(201).json({
       id: savedItem._id,
       name: savedItem.name,
@@ -65,7 +80,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-router.put('/:id', async (req, res) => {
+router.put('/:id', requireRole(['admin', 'researcher']), async (req, res) => {
   try {
     const userName = req.user ? req.user.name : '알 수 없음';
     const oldItem = await LimsItem.findById(req.params.id);
@@ -87,6 +102,7 @@ router.put('/:id', async (req, res) => {
     }
 
     const updatedItem = await LimsItem.findByIdAndUpdate(req.params.id, updateData, { new: true });
+    await logAction(userName, '수정', '시약', `시약 정보 업데이트: ${updatedItem.name}`);
     res.json({
       id: updatedItem._id,
       name: updatedItem.name,
@@ -103,9 +119,10 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireRole(['admin', 'researcher']), async (req, res) => {
   try {
-    await LimsItem.findByIdAndDelete(req.params.id);
+    const deleted = await LimsItem.findByIdAndDelete(req.params.id);
+    if (deleted) await logAction(req.user?.name || '시스템', '삭제', '시약', `시약 삭제: ${deleted.name}`);
     res.json({ message: '삭제 완료' });
   } catch (err) {
     res.status(400).json({ error: '데이터 삭제 실패' });

@@ -2,6 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
+import http from 'http';
+import { Server } from 'socket.io';
 import authRoutes from './routes/auth.js';
 import elnRoutes from './routes/eln.js';
 import limsRoutes from './routes/lims.js';
@@ -11,11 +13,33 @@ import notificationRoutes from './routes/notifications.js';
 import statsRoutes from './routes/stats.js';
 import uploadRoutes from './routes/upload.js';
 import searchRoutes from './routes/search.js';
-import auditRoutes from './routes/audit.js';
+import auditRoutes, { logAction } from './routes/audit.js';
+import Notification from './models/Notification.js';
 
 dotenv.config();
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "*", // In production, specify frontend domain
+    methods: ["GET", "POST", "PUT", "DELETE"]
+  }
+});
+
+// Pass io to routes
+app.use((req, res, next) => {
+  req.io = io;
+  next();
+});
+
+io.on('connection', (socket) => {
+  console.log('Client connected:', socket.id);
+  
+  socket.on('disconnect', () => {
+    console.log('Client disconnected:', socket.id);
+  });
+});
 
 import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
@@ -64,6 +88,20 @@ async function connectDB() {
       ]);
       console.log('🌱 Seed Data Injected');
     }
+    
+    // Seed initial tenant if none exists (Moved inside connectDB to prevent race condition)
+    const Tenant = (await import('./models/Tenant.js')).default;
+    const tenantCount = await Tenant.countDocuments();
+    if (tenantCount === 0) {
+      const defaultTenant = await Tenant.create({name:'Default Lab', complianceMode:false});
+      const admin = await User.findOne({role:'admin'});
+      if (admin && !admin.tenantId) {
+        admin.tenantId = defaultTenant._id;
+        await admin.save();
+      }
+      console.log('🧪 Seeded default tenant and assigned to admin');
+    }
+
 
     // Start Daily Cron Job for LIMS Status Update
     setInterval(async () => {
@@ -81,7 +119,7 @@ async function connectDB() {
             newStatus = '만료';
           } else if (expDate <= thirtyDaysLater) {
             newStatus = '만료 예정';
-          } else if (item.stockValue <= 0) {
+          } else if (item.stockValue <= item.threshold) {
              newStatus = '부족';
           } else if (newStatus === '만료 예정' || newStatus === '만료') {
              newStatus = '양호'; // Reverted
@@ -90,6 +128,19 @@ async function connectDB() {
           if (item.status !== newStatus && item.status !== '주문 중') {
             item.status = newStatus;
             await item.save();
+
+            // 만료되거나 부족할 때 관리자에게 알림
+            if (newStatus === '부족' || newStatus === '만료') {
+              const message = `[재고 알림] 시약 "${item.name}"의 상태가 "${newStatus}"(으)로 변경되었습니다. (현재 재고: ${item.stockValue} ${item.unit})`;
+              const notif = await Notification.create({
+                recipient: '전체', // Or a specific role
+                type: 'inventory_alert',
+                message,
+                link: '/lims'
+              });
+              if (io) io.emit('newNotification', notif);
+              await logAction('시스템', '알림', '시약 관리', message);
+            }
           }
         }
       } catch (e) {
@@ -105,8 +156,10 @@ async function connectDB() {
 
 connectDB();
 
-// API Routes
 import { authMiddleware } from './middleware/authMiddleware.js';
+import { enforceCompliance } from './middleware/compliance.js';
+import Tenant from './models/Tenant.js';
+import reportRoutes from './routes/reports.js';
 
 app.use('/api/auth', authRoutes);
 app.use('/api/eln', authMiddleware, elnRoutes);
@@ -118,6 +171,11 @@ app.use('/api/stats', authMiddleware, statsRoutes);
 app.use('/api/upload', authMiddleware, uploadRoutes);
 app.use('/api/search', authMiddleware, searchRoutes);
 app.use('/api/audit', authMiddleware, auditRoutes);
+app.use('/api/reports', authMiddleware, reportRoutes);
+
+app.use(enforceCompliance);
+
+
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Backend is running' });
@@ -125,6 +183,6 @@ app.get('/api/health', (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });

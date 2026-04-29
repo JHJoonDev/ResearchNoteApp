@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import useAppStore from '../store/useAppStore';
+import { QRCodeSVG } from 'qrcode.react';
 
 function LIMS() {
   const { limsData, loading, fetchLimsData, createLimsItem, updateLimsItem, deleteLimsItem } = useAppStore();
@@ -256,6 +257,18 @@ function LIMS() {
             {activeTab === 'info' ? (
               <form onSubmit={handleSave}>
                 <div className="modal-body">
+                  {modalMode === 'edit' && selectedItem && (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1.5rem', marginBottom: '1.5rem', padding: '1rem', background: 'var(--bg-color)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                      <div style={{ background: '#fff', padding: '0.5rem', borderRadius: '4px', display: 'inline-block' }}>
+                        <QRCodeSVG value={`lims:${selectedItem.id}`} size={80} level="H" />
+                      </div>
+                      <div>
+                        <h4 style={{ margin: '0 0 0.25rem 0', color: 'var(--text-main)', fontSize: '0.95rem' }}>시약 식별 QR 코드</h4>
+                        <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>스마트폰 또는 바코드 스캐너로 스캔하여<br/>재고를 빠르게 조회할 수 있습니다.</p>
+                        <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--primary-color)', fontWeight: '600' }}>ID: {selectedItem.id}</div>
+                      </div>
+                    </div>
+                  )}
                   <div className="form-group">
                     <label>시약명</label>
                     <input type="text" name="name" className="form-input" value={formData.name} onChange={handleInputChange} required />

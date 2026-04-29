@@ -13,13 +13,14 @@ const PIE_COLORS = ['#6366f1', '#f59e0b', '#10b981', '#ef4444'];
 function Dashboard() {
   const navigate = useNavigate();
   const [dateRange, setDateRange] = React.useState({ start: '', end: '' });
-  const { elnData, limsData, fetchElnData, fetchLimsData, dashboardStats, fetchDashboardStats, disposeReagent, orderReagent } = useAppStore();
+  const { elnData, limsData, fetchElnData, fetchLimsData, dashboardStats, fetchDashboardStats, disposeReagent, orderReagent, auditLogs, fetchAuditLogs } = useAppStore();
 
   useEffect(() => {
     fetchElnData();
     fetchLimsData();
     fetchDashboardStats(dateRange.start, dateRange.end);
-  }, [fetchElnData, fetchLimsData, fetchDashboardStats, dateRange]);
+    fetchAuditLogs();
+  }, [fetchElnData, fetchLimsData, fetchDashboardStats, dateRange, fetchAuditLogs]);
 
   const handleNewNote = () => navigate('/eln');
 
@@ -35,6 +36,16 @@ function Dashboard() {
         toast.success('폐기 처리가 완료되었습니다.');
       }
     }
+  };
+
+  const setPresetDate = (days) => {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(end.getDate() - days);
+    setDateRange({
+      start: start.toISOString().split('T')[0],
+      end: end.toISOString().split('T')[0]
+    });
   };
 
   // KPI Calculations
@@ -69,6 +80,12 @@ function Dashboard() {
         <h1 className="page-title" style={{ margin: 0 }}>대시보드</h1>
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
           <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>조회 기간:</span>
+          <div style={{ display: 'flex', gap: '0.25rem', marginRight: '0.5rem' }}>
+            <button className="btn-outline" style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem' }} onClick={() => setPresetDate(7)}>7일</button>
+            <button className="btn-outline" style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem' }} onClick={() => setPresetDate(30)}>30일</button>
+            <button className="btn-outline" style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem' }} onClick={() => setPresetDate(365)}>1년</button>
+            <button className="btn-outline" style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem' }} onClick={() => setDateRange({ start: '', end: '' })}>전체</button>
+          </div>
           <input 
             type="date" 
             className="form-input" 
@@ -84,13 +101,6 @@ function Dashboard() {
             value={dateRange.end}
             onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
           />
-          <button 
-            className="btn-outline" 
-            style={{ padding: '0.4rem 0.6rem', fontSize: '0.85rem' }}
-            onClick={() => setDateRange({ start: '', end: '' })}
-          >
-            초기화
-          </button>
         </div>
       </div>
 
@@ -262,8 +272,8 @@ function Dashboard() {
         </div>
       )}
 
-      {/* Recent Notes & Alerts */}
-      <div className="grid-sections">
+      {/* Recent Notes, Alerts & Activity Feed */}
+      <div className="grid-sections" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
         <section className="card recent-notes">
           <div className="card-header">
             <h2>최근 연구노트</h2>
@@ -314,6 +324,48 @@ function Dashboard() {
               ))
             )}
           </ul>
+        </section>
+
+        <section className="card activity-feed" style={{ maxHeight: '400px', overflowY: 'auto' }}>
+          <div className="card-header" style={{ position: 'sticky', top: 0, backgroundColor: 'var(--surface-color)', zIndex: 1, paddingBottom: '0.5rem', borderBottom: '1px solid var(--border-color)' }}>
+            <h2><i className="fa-solid fa-bolt" style={{ color: 'var(--primary-color)', marginRight: '0.5rem' }}></i>최근 활동 피드</h2>
+          </div>
+          <div style={{ padding: '1rem 0' }}>
+            {auditLogs && auditLogs.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {auditLogs.map((log) => (
+                  <div key={log.id} style={{ display: 'flex', gap: '1rem' }}>
+                    <div style={{ 
+                      width: '36px', height: '36px', borderRadius: '50%', background: 'var(--bg-color)', 
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary-color)', flexShrink: 0 
+                    }}>
+                      <i className={`fa-solid ${
+                        log.action === '로그인' ? 'fa-right-to-bracket' : 
+                        log.action === '작성' ? 'fa-pen' : 
+                        log.action === '수정' ? 'fa-edit' : 
+                        log.action === '승인' ? 'fa-check' : 
+                        log.action === '반려' ? 'fa-xmark' : 
+                        log.action === '삭제' ? 'fa-trash' : 'fa-info-circle'
+                      }`}></i>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.85rem', marginBottom: '0.2rem' }}>
+                        <span style={{ fontWeight: 'bold' }}>{log.user}</span>님이 <span style={{ fontWeight: '600', color: 'var(--primary-color)' }}>{log.target}</span>을(를) {log.action}했습니다.
+                      </div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-main)', marginBottom: '0.2rem' }}>
+                        {log.details}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                        {new Date(log.createdAt).toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p style={{ color: 'var(--text-muted)', textAlign: 'center' }}>최근 활동이 없습니다.</p>
+            )}
+          </div>
         </section>
       </div>
     </div>
