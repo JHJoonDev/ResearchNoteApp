@@ -11,6 +11,11 @@ yarn-error.log*
 .env.development.local
 .env.test.local
 .env.production.local
+backend/.env
+frontend/.env
+!.env.example
+!backend/.env.example
+!frontend/.env.example
 
 # Build
 dist/
@@ -37,3 +42,4 @@ Thumbs.db
 # Project specific
 backend/uploads/
 frontend/dist/
+uploads/

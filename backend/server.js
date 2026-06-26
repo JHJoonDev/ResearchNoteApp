@@ -18,6 +18,10 @@ import Notification from './models/Notification.js';
 
 dotenv.config();
 
+if (!process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required. Copy backend/.env.example to backend/.env and set a random secret.');
+}
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {

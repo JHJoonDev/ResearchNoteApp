@@ -32,7 +32,7 @@ router.post('/login', [
     if (isMatch) {
       const token = jwt.sign(
         { id: user._id, role: user.role, elnRole: user.elnRole, tenantId: user.tenantId },
-        process.env.JWT_SECRET || 'fallback_secret_key',
+        process.env.JWT_SECRET,
         { expiresIn: '1d' }
       );
       
