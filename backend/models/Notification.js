@@ -1,17 +1,12 @@
 import mongoose from 'mongoose';
 
-const NotificationSchema = new mongoose.Schema({
-    recipient: { type: String, required: true }, // 'Admin', 'User Name', or 'Role'
-    type: { 
-        type: String, 
-        enum: ['approval_request', 'approved', 'rejected', 'system', 'info'],
-        default: 'info' 
-    },
-    message: { type: String, required: true },
-    link: { type: String }, // e.g., '/eln/:id'
-    isRead: { type: Boolean, default: false },
-    createdAt: { type: Date, default: Date.now }
-});
-
-const Notification = mongoose.model('Notification', NotificationSchema);
-export default Notification;
+const schema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+  type: { type: String, enum: ['approval-requested', 'approved', 'rejected', 'mentioned', 'commented'], required: true },
+  noteId: { type: mongoose.Schema.Types.ObjectId, ref: 'ElnNote', required: true },
+  actorName: { type: String, required: true }, message: { type: String, required: true, maxlength: 500 },
+  readAt: Date,
+}, { timestamps: { createdAt: true, updatedAt: false } });
+schema.index({ userId: 1, createdAt: -1 });
+schema.index({ userId: 1, readAt: 1 });
+export default mongoose.model('Notification', schema);

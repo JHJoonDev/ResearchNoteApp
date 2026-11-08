@@ -1,0 +1,12 @@
+{
+  "name": "labhub",
+  "private": true,
+  "scripts": {
+    "setup": "npm --prefix backend ci && npm --prefix frontend ci",
+    "build": "npm --prefix frontend run build",
+    "start": "npm --prefix backend start",
+    "test": "npm --prefix backend test && npm --prefix frontend run lint && npm --prefix frontend run build",
+    "test:e2e": "npm --prefix frontend run test:e2e"
+  },
+  "engines": { "node": ">=24" }
+}

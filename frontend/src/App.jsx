@@ -1,65 +1,102 @@
-import React from 'react';
+import { Component, Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast';
 import './App.css';
-
-// Components
 import Layout from './components/Layout';
 import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import ELN from './pages/ELN';
-import ELNEditor from './pages/ELNEditor';
-import LIMS from './pages/LIMS';
-import Members from './pages/Members';
-import Settings from './pages/Settings';
-import AuditLogs from './pages/AuditLogs';
-import CalendarView from './pages/CalendarView';
-import ReportGenerator from './pages/ReportGenerator';
-
 import useAuthStore from './store/useAuthStore';
-
-// 허가된 사용자만 진입 가능하도록 하는 라우트 가드
-const ProtectedRoute = ({ children }) => {
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const ELN = lazy(() => import('./pages/ELN'));
+const LIMS = lazy(() => import('./pages/LIMS'));
+const Members = lazy(() => import('./pages/Members'));
+const Settings = lazy(() => import('./pages/Settings'));
+const Projects = lazy(() => import('./pages/Projects'));
+const AuditLogs = lazy(() => import('./pages/AuditLogs'));
+const Verify = lazy(() => import('./pages/Verify'));
+const SearchResults = lazy(() => import('./pages/SearchResults'));
+const ApprovalInbox = lazy(() => import('./pages/ApprovalInbox'));
+const Protocols = lazy(() => import('./pages/Protocols'));
+const PasswordReset = lazy(() => import('./pages/PasswordReset'));
+const InvitationAccept = lazy(() => import('./pages/InvitationAccept'));
+const Locations = lazy(() => import('./pages/Locations'));
+const Entities = lazy(() => import('./pages/Entities'));
+const ScanLabels = lazy(() => import('./pages/ScanLabels'));
+const ApiKeys = lazy(() => import('./pages/ApiKeys'));
+const Webhooks = lazy(() => import('./pages/Webhooks'));
+const InstrumentInbox = lazy(() => import('./pages/InstrumentInbox'));
+class ErrorBoundary extends Component {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
   }
-  return children;
-};
-
-function App() {
+  render() {
+    return this.state.failed ? (
+      <main className="empty-state">
+        <h1>화면을 불러오지 못했습니다.</h1>
+        <p>기기에 저장된 초안은 유지됩니다.</p>
+        <button className="btn-primary" onClick={() => window.location.reload()}>
+          새로고침
+        </button>
+      </main>
+    ) : (
+      this.props.children
+    );
+  }
+}
+function ProtectedRoute() {
+  const { isAuthenticated, initializing, error, initializeAuth } = useAuthStore();
+  if (initializing) return <p className="empty-state">로그인 확인 중…</p>;
+  if (!isAuthenticated && error)
+    return (
+      <main className="empty-state">
+        <p role="alert">{error}</p>
+        <button className="btn-primary" onClick={initializeAuth}>
+          다시 연결
+        </button>
+      </main>
+    );
+  return isAuthenticated ? <Layout /> : <Navigate to="/login" replace />;
+}
+export default function App() {
+  const { initializeAuth, user } = useAuthStore();
+  useEffect(() => {
+    initializeAuth();
+  }, [initializeAuth]);
   return (
-    <BrowserRouter>
-      <Toaster position="top-right" toastOptions={{ duration: 3000, style: { background: 'var(--surface-color)', color: 'var(--text-main)', border: '1px solid var(--border-color)' } }} />
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        
-        {/* 보호된 라우트들은 Layout 컨테이너를 공유합니다 */}
-        <Route 
-          path="/" 
-          element={
-            <ProtectedRoute>
-              <Layout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<Dashboard />} />
-          <Route path="eln" element={<ELN />} />
-          <Route path="eln/new" element={<ELNEditor />} />
-          <Route path="eln/:id" element={<ELNEditor />} />
-          <Route path="lims" element={<LIMS />} />
-          <Route path="members" element={<Members />} />
-          <Route path="settings" element={<Settings />} />
-          <Route path="audit" element={<AuditLogs />} />
-          <Route path="calendar" element={<CalendarView />} />
-          <Route path="reports" element={<ReportGenerator />} />
-        </Route>
-        
-        {/* 알 수 없는 경로는 대시보드로 이동 */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <Suspense fallback={<p className="empty-state">화면을 불러오는 중…</p>}>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/verify/:verifyId" element={<Verify />} />
+            <Route path="/reset-password" element={<PasswordReset />} />
+            <Route path="/invite" element={<InvitationAccept />} />
+            <Route path="/search" element={<ProtectedRoute />}>
+              <Route index element={<SearchResults />} />
+            </Route>
+            <Route path="/" element={<ProtectedRoute />}>
+              <Route index element={<Dashboard />} />
+              <Route path="eln" element={<ELN />} />
+              <Route path="approvals" element={<ApprovalInbox />} />
+              <Route path="protocols" element={<Protocols />} />
+              <Route path="projects" element={<Projects />} />
+              <Route path="lims" element={<LIMS />} />
+              <Route path="members" element={<Members />} />
+              <Route path="settings" element={<Settings />} />
+              <Route path="locations" element={<Locations />} />
+              <Route path="entities" element={<Entities />} />
+              <Route path="scan" element={<ScanLabels />} />
+              <Route path="api-keys" element={<ApiKeys />} />
+              <Route path="inbox" element={<InstrumentInbox />} />
+              <Route path="webhooks" element={user?.role === 'admin' ? <Webhooks /> : <Navigate to="/" replace />} />
+              <Route
+                path="audit-logs"
+                element={user?.role === 'admin' ? <AuditLogs /> : <Navigate to="/" replace />}
+              />
+            </Route>
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }
-
-export default App;

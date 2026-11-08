@@ -1,0 +1,20 @@
+{
+  "name": "@labhub/loadtest",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "labhub-loadtest": "./bin/run-loadtest.js"
+  },
+  "scripts": {
+    "start": "node ./bin/run-loadtest.js",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "dependencies": {
+    "autocannon": "^9.0.0",
+    "undici": "^6.21.1"
+  }
+}

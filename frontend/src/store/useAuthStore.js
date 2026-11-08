@@ -1,88 +1,79 @@
 import { create } from 'zustand';
-import api from '../api/axios';
-
+import { api, errorMessage } from '../lib/api';
+let epoch = 0;
+const clear = () => {
+  epoch += 1;
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+  window.dispatchEvent(new Event('clear-session-data'));
+};
 const useAuthStore = create((set) => ({
   user: null,
-  isAuthenticated: !!localStorage.getItem('token'),
-  token: localStorage.getItem('token') || null,
+  isAuthenticated: false,
+  initializing: true,
   loading: false,
   error: null,
-
-  login: async (email, password, tenantId) => {
+  login: async (email, password) => {
     set({ loading: true, error: null });
     try {
-      const response = await api.post('/auth/login', { email, password, tenantId });
-      if (response.data.success) {
-        localStorage.setItem('token', response.data.token);
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-        set({
-          user: response.data.user,
-          isAuthenticated: true,
-          token: response.data.token,
-          loading: false,
-        });
-        return true; 
+      const { data } = await api.post('/auth/login', { email, password });
+      if (data.mfaRequired) {
+        set({ loading: false });
+        return { mfaRequired: true, mfaToken: data.mfaToken };
       }
-    } catch (err) {
-      set({
-        error: err.response?.data?.message || '로그인 중 오류가 발생했습니다.',
-        loading: false,
-      });
+      const { data: session } = await api.get('/auth/me');
+      set({ user: session.user, isAuthenticated: true, loading: false, initializing: false });
+      return { authenticated: true };
+    } catch (e) {
+      set({ error: errorMessage(e), loading: false });
+      return null;
+    }
+  },
+  completeMfaLogin: async (mfaToken, code) => {
+    set({ loading: true, error: null });
+    try {
+      await api.post('/auth/login/mfa', { mfaToken, code });
+      const { data } = await api.get('/auth/me');
+      set({ user: data.user, isAuthenticated: true, loading: false, initializing: false });
+      return true;
+    } catch (e) {
+      set({ error: errorMessage(e), loading: false });
       return false;
     }
   },
-
-  register: async (email, password, name) => {
-    set({ loading: true, error: null });
-    try {
-      const res = await api.post('/auth/register', { email, password, name });
-      set({ loading: false });
-      return res.data;
-    } catch (err) {
-      set({ error: err.response?.data?.message || '회원가입 실패', loading: false });
-      return { success: false, message: err.response?.data?.message || '회원가입 실패' };
-    }
-  },
-
-  updateProfile: async (data) => {
-    set({ loading: true, error: null });
-    try {
-      const res = await api.put('/auth/profile', data);
-      if (res.data.success) {
-        localStorage.setItem('user', JSON.stringify(res.data.user));
-        set({ user: res.data.user, loading: false });
-        return { success: true };
-      }
-    } catch (err) {
-      set({ error: err.response?.data?.message || '프로필 업데이트 실패', loading: false });
-      return { success: false, message: err.response?.data?.message || '프로필 업데이트 실패' };
-    }
-  },
-
   logout: async () => {
     try {
       await api.post('/auth/logout');
-    } catch (e) {
-      // ignore
+    } catch {
+      /* Clear the local session even when offline. */
     } finally {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      set({ user: null, isAuthenticated: false, token: null });
+      clear();
+      set({ user: null, isAuthenticated: false });
     }
   },
-  
-  initializeAuth: () => {
-    const token = localStorage.getItem('token');
-    const userStr = localStorage.getItem('user');
-    if (token && userStr) {
-      try {
-        set({ isAuthenticated: true, token, user: JSON.parse(userStr) });
-      } catch (e) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+  initializeAuth: async () => {
+    const current = epoch;
+    set({ initializing: true, error: null });
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    try {
+      const { data } = await api.get('/auth/me');
+      if (current === epoch) set({ user: data.user, isAuthenticated: true, initializing: false });
+    } catch (e) {
+      if (current === epoch) {
+        const unauthenticated = e.response?.status === 401;
+        set({
+          user: null,
+          isAuthenticated: false,
+          initializing: false,
+          error: unauthenticated ? null : errorMessage(e),
+        });
       }
     }
-  }
+  },
 }));
-
+window.addEventListener('session-expired', () => {
+  clear();
+  useAuthStore.setState({ user: null, isAuthenticated: false, initializing: false });
+});
 export default useAuthStore;

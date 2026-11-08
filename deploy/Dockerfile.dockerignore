@@ -1,0 +1,35 @@
+# Git
+.git
+.gitignore
+
+# 의존성 패키지 (컨테이너 내에서 새로 설치)
+**/node_modules
+npm-debug.log*
+
+# 런타임 데이터 및 업로드 파일
+backend/data
+*/data
+
+# 빌드 결과물
+**/dist
+
+# 환경변수 파일 (비밀정보 누출 방지)
+**/.env*
+!**/.env.example
+!deploy/.env.example
+!backend/.env.example
+
+# 테스트 및 커버리지 산출물
+test-results
+playwright-report
+blob-report
+coverage
+.pytest_cache
+
+# 임시 및 작업 파일
+draft
+tmp
+*.tmp
+*.log
+.DS_Store
+Thumbs.db

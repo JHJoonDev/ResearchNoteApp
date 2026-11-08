@@ -1,0 +1,33 @@
+{
+    # 글로벌 설정
+    # ACME 인증서 발급용 이메일
+    # email {$ACME_EMAIL}
+}
+
+{$APP_DOMAIN:localhost}, http://localhost, http://127.0.0.1, :80 {
+    # 연구 데이터 및 첨부파일 업로드 크기 허용치 설정 (50MB)
+    request_body {
+        max_size 50MB
+    }
+
+    # 기본 보안 헤더
+    header {
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+
+    # LabHub Node.js 애플리케이션 프록시
+    reverse_proxy app:5000 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+
+    # 접근 및 운영 로그
+    log {
+        output stdout
+        format console
+    }
+}

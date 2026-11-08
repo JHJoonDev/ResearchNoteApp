@@ -1,132 +1,326 @@
-import React, { useEffect, useState } from 'react';
-import toast from 'react-hot-toast';
-import useAppStore from '../store/useAppStore';
-
-function Settings() {
-  const { settings, fetchSettings, updateSettings } = useAppStore();
-  const [formData, setFormData] = useState({
-    labName: '',
-    receiveEmailNotifications: true,
-    defaultElnRole: 'researcher',
-    theme: 'light'
-  });
-  const [isSaving, setIsSaving] = useState(false);
-
-  const globalTheme = useAppStore((state) => state.theme);
+import { useEffect, useState } from 'react';
+import QRCode from 'qrcode';
+import useAuthStore from '../store/useAuthStore';
+import { api, errorMessage, downloadBlob } from '../lib/api';
+export default function Settings() {
+  const { user, logout } = useAuthStore();
+  const [current, setCurrent] = useState(''),
+    [next, setNext] = useState(''),
+    [confirm, setConfirm] = useState(''),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState(''),
+    [notice, setNotice] = useState('');
+  const [mfaEnabled, setMfaEnabled] = useState(null);
+  const [mfaPassword, setMfaPassword] = useState('');
+  const [mfaCode, setMfaCode] = useState('');
+  const [mfaSetup, setMfaSetup] = useState(null);
+  const [recoveryCodes, setRecoveryCodes] = useState([]);
+  const [mfaError, setMfaError] = useState('');
+  const [mfaNotice, setMfaNotice] = useState('');
+  const [mfaBusy, setMfaBusy] = useState(false);
 
   useEffect(() => {
-    fetchSettings();
-  }, [fetchSettings]);
-
-  useEffect(() => {
-    if (settings) {
-      setFormData({
-        labName: settings.labName || '',
-        receiveEmailNotifications: settings.receiveEmailNotifications !== false,
-        defaultElnRole: settings.defaultElnRole || 'researcher',
-        theme: globalTheme || 'light'
-      });
+    api
+      .get('/auth/mfa')
+      .then(({ data }) => setMfaEnabled(Boolean(data.enabled)))
+      .catch((e) => setMfaError(errorMessage(e)));
+  }, []);
+  const change = async (e) => {
+    e.preventDefault();
+    setError('');
+    if (next !== confirm) {
+      setError('새 비밀번호가 일치하지 않습니다.');
+      return;
     }
-  }, [settings, globalTheme]);
-
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    if (name === 'theme') {
-      useAppStore.getState().setTheme(value);
+    setBusy(true);
+    try {
+      await api.put('/auth/password', { currentPassword: current, newPassword: next });
+      await logout();
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setBusy(false);
     }
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
   };
-
-  const handleSave = async () => {
-    setIsSaving(true);
-    await updateSettings(formData);
-    useAppStore.getState().setTheme(formData.theme);
-    setIsSaving(false);
-    toast.success('설정이 저장되었습니다.');
+  const exportData = async () => {
+    setBusy(true);
+    setError('');
+    try {
+      const notes = [];
+      let page = 1;
+      let total = Infinity;
+      while (notes.length < total) {
+        const { data } = await api.get('/eln', { params: { page, limit: 100 } });
+        const items = Array.isArray(data) ? data : data.items || [];
+        notes.push(...items);
+        total = Array.isArray(data) ? items.length : data.total || 0;
+        if (!items.length) break;
+        page += 1;
+      }
+      const exported = [];
+      for (const n of notes) exported.push((await api.get(`/eln/${n.id}/export`)).data);
+      downloadBlob(
+        { format: 'labhub-notes', schemaVersion: 1, exportedAt: new Date(), notes: exported },
+        'labhub-notes.json',
+      );
+      setNotice(
+        '접근 가능한 노트와 이력을 내보냈습니다. 첨부 원본은 노트 상세에서 별도로 다운로드해주세요.',
+      );
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
   };
-
-  if (!settings) {
-    return (
-      <div className="dashboard-content" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <span className="spinner"></span>
-      </div>
-    );
-  }
-
+  const setupMfa = async (e) => {
+    e.preventDefault();
+    setMfaBusy(true);
+    setMfaError('');
+    setMfaNotice('');
+    try {
+      const { data } = await api.post('/auth/mfa/setup', { password: mfaPassword });
+      const qrDataUrl = await QRCode.toDataURL(data.otpauthUrl);
+      setMfaSetup({ ...data, qrDataUrl });
+      setMfaPassword('');
+      setMfaCode('');
+    } catch (e) {
+      setMfaError(errorMessage(e));
+    } finally {
+      setMfaBusy(false);
+    }
+  };
+  const enableMfa = async (e) => {
+    e.preventDefault();
+    setMfaBusy(true);
+    setMfaError('');
+    try {
+      const { data } = await api.post('/auth/mfa/enable', { code: mfaCode.trim() });
+      setRecoveryCodes(data.recoveryCodes || []);
+      setMfaEnabled(true);
+      setMfaSetup(null);
+      setMfaCode('');
+      setMfaNotice('복구 코드는 이 화면에서 한 번만 표시됩니다. 안전한 곳에 보관하세요.');
+    } catch (e) {
+      setMfaError(errorMessage(e));
+    } finally {
+      setMfaBusy(false);
+    }
+  };
+  const disableMfa = async (e) => {
+    e.preventDefault();
+    setMfaBusy(true);
+    setMfaError('');
+    try {
+      await api.post('/auth/mfa/disable', { password: mfaPassword, code: mfaCode.trim() });
+      setMfaEnabled(false);
+      setMfaPassword('');
+      setMfaCode('');
+      setRecoveryCodes([]);
+      setMfaNotice('2단계 인증을 해제했습니다.');
+    } catch (e) {
+      setMfaError(errorMessage(e));
+    } finally {
+      setMfaBusy(false);
+    }
+  };
+  const copyRecoveryCodes = async () => {
+    try {
+      await navigator.clipboard.writeText(recoveryCodes.join('\n'));
+      setMfaNotice('복구 코드를 복사했습니다.');
+    } catch {
+      setMfaError('클립보드에 복사하지 못했습니다. 코드를 직접 선택해 복사해주세요.');
+    }
+  };
   return (
     <div className="dashboard-content">
-      <h1 className="page-title">시스템 설정</h1>
-      
-      <div className="grid-sections">
-        <section className="card">
-            <div className="card-header" style={{ marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)' }}>
-              <h2 style={{ color: 'var(--text-main)' }}>기본 설정</h2>
+      <div className="page-heading">
+        <div>
+          <p className="eyebrow">ACCOUNT & DATA</p>
+          <h1 className="page-title">계정 및 데이터</h1>
+          <p className="muted">
+            {user.name} · {user.email}
+          </p>
+        </div>
+      </div>
+      {error && (
+        <p className="error-banner" role="alert">
+          {error}
+        </p>
+      )}
+      {notice && (
+        <p className="notice-banner" role="status">
+          {notice}
+        </p>
+      )}
+      <div className="project-grid">
+        <section className="card mfa-card">
+          <h2>2단계 인증</h2>
+          <p className="muted">
+            {mfaEnabled === null
+              ? '인증 설정을 불러오는 중…'
+              : mfaEnabled
+                ? '로그인과 서명에 인증 앱 코드가 필요합니다.'
+                : '인증 앱(TOTP)으로 로그인과 서명을 보호합니다.'}
+          </p>
+          {mfaError && <p role="alert" className="error-banner">{mfaError}</p>}
+          {mfaNotice && <p role="status" className="notice-banner">{mfaNotice}</p>}
+          {recoveryCodes.length > 0 ? (
+            <div className="recovery-codes">
+              <p>복구 코드를 지금 저장하세요. 이 목록은 다시 표시되지 않습니다.</p>
+              <pre>{recoveryCodes.join('\n')}</pre>
+              <div className="button-row">
+                <button className="btn-outline" type="button" onClick={copyRecoveryCodes}>
+                  복구 코드 복사
+                </button>
+                <button className="btn-secondary" type="button" onClick={() => setRecoveryCodes([])}>
+                  확인 후 닫기
+                </button>
+              </div>
             </div>
-            <div style={{ padding: '1rem 0' }}>
-              <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--text-main)' }}>연구실 이름</label>
-              <input 
-                type="text" 
-                name="labName"
-                className="form-input" 
-                style={{ width: '100%', padding: '0.8rem', border: '1px solid var(--border-color)', borderRadius: '6px' }} 
-                value={formData.labName} 
-                onChange={handleChange}
-              />
-            </div>
-            
-            <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--text-main)' }}>기본 멤버 권한</label>
-              <select 
-                name="defaultElnRole" 
-                className="form-input" 
-                style={{ width: '100%', padding: '0.8rem', border: '1px solid var(--border-color)', borderRadius: '6px' }}
-                value={formData.defaultElnRole}
-                onChange={handleChange}
-              >
-                <option value="admin">책임 연구원 (Admin)</option>
-                <option value="researcher">연구원</option>
-                <option value="viewer">방문 연구원</option>
-              </select>
-            </div>
-
-            <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--text-main)' }}>테마</label>
-              <select 
-                name="theme" 
-                className="form-input" 
-                style={{ width: '100%', padding: '0.8rem', border: '1px solid var(--border-color)', borderRadius: '6px' }}
-                value={formData.theme}
-                onChange={handleChange}
-              >
-                <option value="light">라이트 모드 (Light)</option>
-                <option value="dark">다크 모드 (Dark)</option>
-              </select>
-            </div>
-
-            <div style={{ marginBottom: '2rem' }}>
-              <label className="checkbox-container" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', color: 'var(--text-main)' }}>
-                <input 
-                  type="checkbox" 
-                  name="receiveEmailNotifications"
-                  checked={formData.receiveEmailNotifications} 
-                  onChange={handleChange}
-                /> 
-                시스템 알림 이메일 수신
+          ) : mfaEnabled ? (
+            <form onSubmit={disableMfa} className="settings-form">
+              <label>
+                비밀번호
+                <input
+                  required
+                  type="password"
+                  autoComplete="current-password"
+                  className="form-input"
+                  value={mfaPassword}
+                  onChange={(e) => setMfaPassword(e.target.value)}
+                />
               </label>
-            </div>
-            
-            <button className="btn-primary" onClick={handleSave} disabled={isSaving}>
-              {isSaving ? '저장 중...' : '설정 저장하기'}
+              <label>
+                인증 앱 코드 또는 복구 코드
+                <input
+                  required
+                  autoComplete="one-time-code"
+                  className="form-input"
+                  value={mfaCode}
+                  onChange={(e) => setMfaCode(e.target.value)}
+                />
+              </label>
+              <button className="btn-secondary" disabled={mfaBusy}>
+                {mfaBusy ? '처리 중…' : '2단계 인증 해제'}
+              </button>
+            </form>
+          ) : mfaSetup ? (
+            <form onSubmit={enableMfa} className="settings-form">
+              <img className="mfa-qr" src={mfaSetup.qrDataUrl} alt="인증 앱 등록 QR 코드" />
+              <p>QR 코드를 읽지 못하면 인증 앱에 이 키를 직접 입력하세요.</p>
+              <code className="hash-value">{mfaSetup.secret}</code>
+              <label>
+                인증 앱 코드
+                <input
+                  required
+                  autoComplete="one-time-code"
+                  className="form-input"
+                  value={mfaCode}
+                  onChange={(e) => setMfaCode(e.target.value)}
+                />
+              </label>
+              <div className="button-row">
+                <button
+                  className="btn-outline"
+                  type="button"
+                  onClick={() => {
+                    setMfaSetup(null);
+                    setMfaPassword('');
+                    setMfaCode('');
+                  }}
+                >
+                  취소
+                </button>
+                <button className="btn-primary" disabled={mfaBusy}>
+                  {mfaBusy ? '확인 중…' : '2단계 인증 켜기'}
+                </button>
+              </div>
+            </form>
+          ) : (
+            <form onSubmit={setupMfa} className="settings-form">
+              <label>
+                현재 비밀번호
+                <input
+                  required
+                  type="password"
+                  autoComplete="current-password"
+                  className="form-input"
+                  value={mfaPassword}
+                  onChange={(e) => setMfaPassword(e.target.value)}
+                />
+              </label>
+              <button className="btn-primary" disabled={mfaBusy || mfaEnabled === null}>
+                {mfaBusy ? '등록 준비 중…' : '2단계 인증 등록'}
+              </button>
+            </form>
+          )}
+        </section>
+        <section className="card">
+          <h2>비밀번호 변경</h2>
+          <p className="muted">변경 후 모든 기기에서 다시 로그인해야 합니다.</p>
+          <form onSubmit={change} className="settings-form">
+            <label>
+              현재 비밀번호
+              <input
+                required
+                type="password"
+                autoComplete="current-password"
+                className="form-input"
+                value={current}
+                onChange={(e) => setCurrent(e.target.value)}
+              />
+            </label>
+            <label>
+              새 비밀번호 (12자 이상)
+              <input
+                required
+                minLength={12}
+                maxLength={128}
+                type="password"
+                autoComplete="new-password"
+                className="form-input"
+                value={next}
+                onChange={(e) => setNext(e.target.value)}
+              />
+            </label>
+            <label>
+              새 비밀번호 확인
+              <input
+                required
+                type="password"
+                autoComplete="new-password"
+                className="form-input"
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+              />
+            </label>
+            <button className="btn-primary" disabled={busy}>
+              비밀번호 변경
             </button>
-          </div>
+          </form>
+        </section>
+        <section className="card">
+          <h2>연구 데이터 내보내기</h2>
+          <p className="project-description muted">
+            현재 접근 가능한 연구노트, 버전 이력, 검토 기록, 첨부 메타데이터를 JSON 파일로
+            보관합니다. 휴지통과 첨부 원본은 포함되지 않습니다.
+          </p>
+          <button className="btn-primary" disabled={busy} onClick={exportData}>
+            {busy ? '처리 중…' : '연구노트 내보내기'}
+          </button>
+          <hr />
+          <h3>데이터 보관</h3>
+          <p className="muted">
+            노트 삭제는 휴지통으로 이동하며 실험 중 사용한 시약은 자동 반환하지 않습니다. 초안은
+            현재 기기에 계정별로 저장됩니다.
+          </p>
+          <hr />
+          <h3>검토 기록 안내</h3>
+          <p className="muted">
+            승인은 내부 검토 기록입니다. 별도 검증이나 규정 준수 인증을 의미하지 않습니다.
+          </p>
         </section>
       </div>
     </div>
   );
 }
-
-export default Settings;

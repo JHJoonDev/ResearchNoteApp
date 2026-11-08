@@ -1,191 +1,157 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import useAppStore from '../store/useAppStore';
-
-function Members() {
-  const { membersData, loading, fetchMembers, createMember, updateMember, deleteMember } = useAppStore();
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState('create');
-  const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    role: 'researcher',
-    elnRole: '연구원'
-  });
-
+import useAuthStore from '../store/useAuthStore';
+import Modal from '../components/Modal';
+export default function Members() {
+  const { membersData, fetchMembers, createMember, updateMember, deleteMember, error } =
+    useAppStore();
+  const { user } = useAuthStore();
+  const [form, setForm] = useState(null),
+    [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState('');
   useEffect(() => {
     fetchMembers();
   }, [fetchMembers]);
-
-  const handleOpenModal = (mode, member = null) => {
-    setModalMode(mode);
-    if (mode === 'edit' && member) {
-      setFormData({
-        name: member.name,
-        email: member.email,
-        role: member.role,
-        elnRole: member.elnRole || '연구원'
-      });
-      setEditingId(member.id);
-    } else {
-      setFormData({
-        name: '',
-        email: '',
-        role: 'researcher',
-        elnRole: '연구원'
-      });
-      setEditingId(null);
-    }
-    setIsModalOpen(true);
-  };
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-  };
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSave = async (e) => {
+  const save = async (e) => {
     e.preventDefault();
-    if (modalMode === 'create') {
-      await createMember(formData);
-    } else {
-      await updateMember(editingId, formData);
-    }
-    handleCloseModal();
-  };
-
-  const handleDelete = async (id) => {
-    if (window.confirm('정말 이 멤버를 삭제하시겠습니까?')) {
-      await deleteMember(id);
+    if (busy) return;
+    setBusy(true);
+    const payload = form.id ? form : { ...form, invite: Boolean(form.invite), password: form.invite ? undefined : form.password };
+    const ok = form.id ? await updateMember(form.id, payload) : await createMember(payload);
+    setBusy(false);
+    if (ok) {
+      if (!form.id && form.invite) setNotice('초대 요청을 처리했습니다. 메일 설정에 따라 초대 안내가 전송됩니다.');
+      setForm(null);
     }
   };
-
-  const getRoleBadge = (role) => {
-    if (role === 'admin') return '시스템 관리자';
-    if (role === 'researcher') return '시스템 사용자';
-    return '방문 사용자';
-  };
-
-  const getElnRoleColor = (elnRole) => {
-    if (elnRole === '연구소장') return 'var(--danger)'; 
-    if (elnRole === '책임연구원') return 'var(--warning)';
-    return 'var(--success)';
-  };
-
-  const getAvatarColor = (role) => {
-    if (role === 'admin') return '0D8ABC';
-    if (role === 'researcher') return '10B981';
-    return '6B7280';
-  };
-
   return (
     <div className="dashboard-content">
-      <div className="card-header" style={{ marginBottom: '2rem' }}>
-        <h1 className="page-title" style={{ marginBottom: 0 }}>연구실 멤버</h1>
-        <button className="btn-primary" onClick={() => handleOpenModal('create')}>
-          <i className="fa-solid fa-user-plus"></i> 멤버 초대
-        </button>
-      </div>
-      
-      <div className="card">
-        {loading ? (
-          <div style={{ padding: '2rem', textAlign: 'center' }}>
-            <span className="spinner" style={{ display: 'inline-block', width: '1.5rem', height: '1.5rem', border: '3px solid var(--border-color)', borderTopColor: 'var(--primary-color)', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></span>
-          </div>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.5rem' }}>
-            {membersData.length === 0 ? (
-              <p style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>등록된 멤버가 없습니다.</p>
-            ) : (
-              membersData.map((member) => (
-                <div key={member.id} className="kpi-card" style={{ flexDirection: 'column', alignItems: 'center', padding: '2rem', textAlign: 'center', position: 'relative' }}>
-                  <div style={{ position: 'absolute', top: '10px', right: '10px' }}>
-                    <div className="action-btns">
-                      <button className="btn-icon" onClick={() => handleOpenModal('edit', member)}>
-                        <i className="fa-solid fa-edit"></i>
-                      </button>
-                      <button className="btn-icon delete" onClick={() => handleDelete(member.id)}>
-                        <i className="fa-solid fa-trash"></i>
-                      </button>
-                    </div>
-                  </div>
-                  <img 
-                    src={`https://ui-avatars.com/api/?name=${encodeURIComponent(member.name)}&background=${getAvatarColor(member.role)}&color=fff`} 
-                    alt="User" 
-                    style={{ width: '80px', height: '80px', borderRadius: '50%', marginBottom: '1.5rem', border: '4px solid #F3F4F6' }} 
-                  />
-                  <h3 style={{ fontSize: '1.3rem', marginBottom: '0.4rem', fontWeight: '700' }}>{member.name}</h3>
-                  <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
-                    <span style={{ backgroundColor: 'var(--bg-secondary)', padding: '0.2rem 0.6rem', borderRadius: '4px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                      {getRoleBadge(member.role)}
-                    </span>
-                    <span style={{ backgroundColor: 'var(--bg-secondary)', padding: '0.2rem 0.6rem', borderRadius: '4px', fontSize: '0.8rem', color: getElnRoleColor(member.elnRole), fontWeight: '600' }}>
-                      {member.elnRole || '연구원'}
-                    </span>
-                  </div>
-                  <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{member.email}</p>
-                </div>
-              ))
-            )}
-          </div>
+      <div className="page-heading">
+        <div>
+          <p className="eyebrow">YOUR LAB</p>
+          <h1 className="page-title">연구실 멤버</h1>
+          <p className="muted">관리자가 계정을 등록하고 프로젝트별 접근 권한을 부여합니다.</p>
+        </div>
+        {user.role === 'admin' && (
+          <button
+            className="btn-primary"
+            onClick={() => setForm({ name: '', email: '', role: 'researcher', password: '', invite: false })}
+          >
+            ＋ 멤버 등록
+          </button>
         )}
       </div>
-
-      {isModalOpen && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h2>{modalMode === 'create' ? '새 멤버 초대' : '멤버 정보 수정'}</h2>
-              <button className="close-btn" onClick={handleCloseModal}>&times;</button>
-            </div>
-            <form onSubmit={handleSave}>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label>이름</label>
-                  <input type="text" name="name" className="form-input" value={formData.name} onChange={handleInputChange} required />
-                </div>
-                <div className="form-group">
-                  <label>이메일</label>
-                  <input type="email" name="email" className="form-input" value={formData.email} onChange={handleInputChange} required />
-                </div>
-                <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
-                  <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
-                    <label>앱 사용 권한</label>
-                    <select name="role" className="form-input" value={formData.role} onChange={handleInputChange}>
-                      <option value="admin">시스템 관리자 (Admin)</option>
-                      <option value="researcher">시스템 사용자</option>
-                      <option value="viewer">방문 사용자</option>
-                    </select>
-                  </div>
-                  <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
-                    <label>ELN 결재 권한</label>
-                    <select name="elnRole" className="form-input" value={formData.elnRole} onChange={handleInputChange}>
-                      <option value="연구원">연구원 (기본 작성자)</option>
-                      <option value="책임연구원">책임연구원 (1차 승인)</option>
-                      <option value="연구소장">연구소장 (최종 승인)</option>
-                    </select>
-                  </div>
-                </div>
-                {modalMode === 'create' && (
-                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '-0.5rem' }}>
-                    * 초기 비밀번호는 'password'로 설정됩니다.
-                  </p>
+      {notice && <p role="status" className="notice-banner">{notice}</p>}
+      <div className="project-grid">
+        {membersData.map((m) => (
+          <section className="card" key={m.id}>
+            <span className="avatar">{m.name.slice(0, 1)}</span>
+            <h2>{m.name}</h2>
+            <p className="muted">{m.email}</p>
+            {m.isActive === false && <span className="status-pill status-rejected">비활성</span>}
+            <p>
+              {m.role === 'admin' ? '관리자' : m.role === 'researcher' ? '연구원' : '읽기 전용'}
+            </p>
+            {user.role === 'admin' && (
+              <div className="button-row">
+                <button
+                  className="btn-outline"
+                  disabled={busy}
+                  onClick={() => setForm({ ...m, password: '' })}
+                >
+                  수정
+                </button>
+                {m.id !== user.id && m.isActive !== false && (
+                  <button
+                    className="btn-outline"
+                    disabled={busy}
+                    onClick={async () => {
+                      if (window.confirm(`${m.name} 계정을 비활성화할까요? 작성·서명 기록은 유지됩니다.`)) {
+                        setBusy(true);
+                        await deleteMember(m.id);
+                        setBusy(false);
+                      }
+                    }}
+                  >
+                    비활성화
+                  </button>
+                )}
+                {m.id !== user.id && m.isActive === false && (
+                  <button
+                    className="btn-outline"
+                    disabled={busy}
+                    onClick={async () => {
+                      setBusy(true);
+                      await updateMember(m.id, { ...m, isActive: true });
+                      setBusy(false);
+                    }}
+                  >
+                    재활성화
+                  </button>
                 )}
               </div>
-              <div className="modal-footer">
-                <button type="button" className="btn-secondary" onClick={handleCloseModal}>취소</button>
-                <button type="submit" className="btn-primary">저장</button>
-              </div>
-            </form>
-          </div>
-        </div>
+            )}
+          </section>
+        ))}
+      </div>
+      {form && (
+        <Modal
+          title={form.id ? '멤버 수정' : '멤버 등록'}
+          busy={busy}
+          onClose={() => setForm(null)}
+        >
+          <form onSubmit={save}>
+            <div className="modal-body">
+              {error && (
+                <p role="alert" className="error-banner">
+                  {error}
+                </p>
+              )}
+              {[
+                ['name', '이름', 'text'],
+                ['email', '이메일', 'email'],
+                ...(!form.id && form.invite ? [] : [[
+                  'password',
+                  form.id ? '새 비밀번호 (변경할 때만 입력)' : '초기 비밀번호 (12자 이상)',
+                  'password',
+                ]]),
+              ].map(([key, label, type]) => (
+                <label className="form-group" key={key}>
+                  {label}
+                  <input
+                    className="form-input"
+                    type={type}
+                    required={key !== 'password' || !form.id}
+                    minLength={key === 'password' ? 12 : undefined}
+                    value={form[key]}
+                    onChange={(e) => setForm({ ...form, [key]: e.target.value })}
+                  />
+                </label>
+              ))}
+              <label>
+                계정 권한
+                <select
+                  className="form-input"
+                  disabled={form.id === user.id}
+                  value={form.role}
+                  onChange={(e) => setForm({ ...form, role: e.target.value })}
+                >
+                  <option value="researcher">연구원</option>
+                  <option value="viewer">읽기 전용</option>
+                  <option value="admin">관리자</option>
+                </select>
+              </label>
+              {!form.id && <label className="checkbox-row"><input type="checkbox" checked={form.invite} onChange={(e) => setForm({ ...form, invite: e.target.checked })} />초대 메일 전송 (메일 미설정 시 계정은 만들어지지 않습니다)</label>}
+              <p className="muted">관리자가 비밀번호를 직접 설정하거나, 7일 유효한 초대 링크를 보낼 수 있습니다.</p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-primary" disabled={busy}>
+                {busy ? '저장 중…' : '저장'}
+              </button>
+            </div>
+          </form>
+        </Modal>
       )}
     </div>
   );
 }
-
-export default Members;

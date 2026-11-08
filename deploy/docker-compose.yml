@@ -1,0 +1,114 @@
+services:
+  mongo:
+    image: mongo:7.0
+    restart: unless-stopped
+    environment:
+      MONGO_ROOT_USERNAME: ${MONGO_ROOT_USERNAME}
+      MONGO_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+      MONGO_APP_USERNAME: ${MONGO_APP_USERNAME:-labhub}
+      MONGO_APP_PASSWORD: ${MONGO_APP_PASSWORD}
+      DB_NAME: ${DB_NAME:-labhub}
+    volumes:
+      - mongo_data:/data/db
+      - mongo_config:/data/configdb
+      - ./scripts/mongo-init.sh:/deploy/scripts/mongo-init.sh:ro
+    entrypoint: ["/bin/bash", "/deploy/scripts/mongo-init.sh"]
+    healthcheck:
+      test:
+        - "CMD-SHELL"
+        - >-
+          mongosh --port 27017 -u "$$MONGO_ROOT_USERNAME" -p "$$MONGO_ROOT_PASSWORD"
+          --authenticationDatabase admin --quiet
+          --eval "Boolean(rs.status().ok && rs.hello().isWritablePrimary)" | grep -q 'true'
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+
+  app:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      HOST: "0.0.0.0"
+      TRUST_PROXY: 1
+      MONGO_URI: "mongodb://${MONGO_APP_USERNAME:-labhub}:${MONGO_APP_PASSWORD}@mongo:27017/${DB_NAME:-labhub}?replicaSet=rs0&authSource=${DB_NAME:-labhub}"
+      DB_NAME: ${DB_NAME:-labhub}
+      JWT_SECRET: ${JWT_SECRET}
+      DATA_ENCRYPTION_KEY: ${DATA_ENCRYPTION_KEY}
+      SETUP_TOKEN: ${SETUP_TOKEN}
+      CORS_ORIGIN: ${CORS_ORIGIN:-https://${APP_DOMAIN:-localhost}}
+      ORG_NAME: ${ORG_NAME:-연구실}
+      RETENTION_YEARS: ${RETENTION_YEARS:-30}
+      TIMESTAMP_PROVIDER: ${TIMESTAMP_PROVIDER:-none}
+      # 민간 RFC 3161 TSA 연동 설정 (TIMESTAMP_PROVIDER=rfc3161 시 활성화)
+      TSA_URL: ${TSA_URL:-}
+      TSA_USERNAME: ${TSA_USERNAME:-}
+      TSA_PASSWORD: ${TSA_PASSWORD:-}
+      TSA_CA_CERT: ${TSA_CA_CERT:-}
+      TSA_POLICY_OID: ${TSA_POLICY_OID:-}
+      # 국가R&D 연구노트 포털 연동 설정 (TIMESTAMP_PROVIDER=enote-portal 시 활성화)
+      ENOTE_CLIENT_ID: ${ENOTE_CLIENT_ID:-}
+      ENOTE_CLIENT_SECRET: ${ENOTE_CLIENT_SECRET:-}
+      ENOTE_ENDPOINT: ${ENOTE_ENDPOINT:-}
+    volumes:
+      - app_data:/app/backend/data
+      - ./backups:/backups
+    healthcheck:
+      test:
+        - "CMD"
+        - "node"
+        - "-e"
+        - "fetch('http://127.0.0.1:5000/api/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:-localhost}
+      ACME_EMAIL: ${ACME_EMAIL:-}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+  # [선택] Meilisearch 고성능 서버 검색 엔진 (2단계 이후 대규모 환경용 옵션)
+  # meilisearch:
+  #   image: getmeili/meilisearch:v1.12
+  #   restart: unless-stopped
+  #   environment:
+  #     MEILI_ENV: production
+  #     MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:?}
+  #     MEILI_NO_ANALYTICS: "true"
+  #   volumes:
+  #     - meili_data:/meili_data
+
+volumes:
+  mongo_data:
+    name: labhub_mongo_data
+  mongo_config:
+    name: labhub_mongo_config
+  app_data:
+    name: labhub_app_data
+  caddy_data:
+    name: labhub_caddy_data
+  caddy_config:
+    name: labhub_caddy_config
+  # meili_data:
+  #   name: labhub_meili_data

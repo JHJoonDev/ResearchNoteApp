@@ -1,166 +1,194 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import toast from 'react-hot-toast';
+import { useEffect, useState } from 'react';
+import { Link, Navigate, useLocation } from 'react-router-dom';
 import useAuthStore from '../store/useAuthStore';
-
-function Login() {
-  const [isRegisterMode, setIsRegisterMode] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
-  const [tenants, setTenants] = useState([]);
-  const [selectedTenant, setSelectedTenant] = useState('');
-  
-  React.useEffect(() => {
-    const fetchTenants = async () => {
-      try {
-        const res = await fetch('/api/auth/tenants'); // I need to create this route or use /api/tenants
-        const data = await res.json();
-        if (Array.isArray(data)) setTenants(data);
-      } catch (e) {
-        console.error('Failed to fetch tenants', e);
-      }
-    };
-    fetchTenants();
+import { api, errorMessage } from '../lib/api';
+export default function Login() {
+  const location = useLocation();
+  const { login, completeMfaLogin, isAuthenticated, loading, error: loginError } = useAuthStore();
+  const [setup, setSetup] = useState(null),
+    [error, setError] = useState(''),
+    [busy, setBusy] = useState(false);
+  const [authProviders, setAuthProviders] = useState(null);
+  const [mfaToken, setMfaToken] = useState('');
+  const [mfaCode, setMfaCode] = useState('');
+  const [form, setForm] = useState({ name: '', email: '', password: '', setupToken: '' });
+  const check = () =>
+    api
+      .get('/auth/setup')
+      .then(({ data }) => {
+        setSetup(data.required);
+        setError('');
+      })
+      .catch((e) => setError(errorMessage(e)));
+  useEffect(() => {
+    check();
+    api.get('/auth/providers').then(({ data }) => setAuthProviders(data)).catch(() => setAuthProviders(null));
   }, []);
-
-  
-  const navigate = useNavigate();
-  
-  const login = useAuthStore((state) => state.login);
-  const register = useAuthStore((state) => state.register);
-  const loading = useAuthStore((state) => state.loading);
-  const error = useAuthStore((state) => state.error);
-
-  const handleSubmit = async (e) => {
+  if (isAuthenticated) return <Navigate to="/" replace />;
+  const oidcEnabled = authProviders?.oidc?.enabled === true;
+  const change = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+  const submit = async (e) => {
     e.preventDefault();
-    if (isRegisterMode) {
-      if (email && password && name) {
-        const result = await register(email, password, name);
-        if (result && result.success) {
-          toast.success('가입 신청이 완료되었습니다. 관리자 승인을 기다려주세요.');
-          setIsRegisterMode(false);
-        } else {
-          toast.error(result?.message || '회원가입 중 오류가 발생했습니다.');
-        }
-      } else {
-        toast.error('모든 필드를 입력해주세요.');
+    setError('');
+    setBusy(true);
+    try {
+      if (setup) {
+        await api.post('/auth/setup', form, { headers: { 'X-Setup-Token': form.setupToken } });
+        setSetup(false);
       }
-    } else {
-      if (email && password) {
-        const success = await login(email, password, selectedTenant);
-        if (success) {
-          navigate('/');
-        }
-      } else {
-        toast.error('이메일과 비밀번호를 입력해주세요.');
+      const result = await login(form.email, form.password);
+      if (result?.mfaRequired) {
+        setMfaToken(result.mfaToken);
+        setMfaCode('');
       }
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setBusy(false);
     }
   };
-
+  const submitMfa = async (e) => {
+    e.preventDefault();
+    setError('');
+    setBusy(true);
+    try {
+      const complete = await completeMfaLogin(mfaToken, mfaCode.trim());
+      if (complete) {
+        setMfaToken('');
+        setMfaCode('');
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
   return (
-    <div className="login-container" style={{ background: 'var(--bg-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: '1rem' }}>
-      <div className="login-card" style={{ width: '100%', maxWidth: '400px', background: 'var(--surface-color)', borderRadius: '24px', padding: '2.5rem 2rem', boxShadow: 'var(--shadow-lg)', border: '1px solid var(--border-color)' }}>
-        
-        <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: '800', color: 'var(--text-main)', marginBottom: '0.5rem', letterSpacing: '-0.025em' }}>
-            {isRegisterMode ? '새 계정 만들기' : '계정에 로그인'}
-          </h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: '500' }}>
-            LabHub — AI 업무 자동화 연구 플랫폼
+    <main className="auth-page">
+      <section className="auth-story">
+        <span className="brand-mark">▤ LabHub</span>
+        <h1>
+          발견의 순간을
+          <br />
+          신뢰할 수 있는 기록으로.
+        </h1>
+        <p>
+          실험 노트, 시약, 검토 이력을
+          <br />
+          연구팀의 한 공간에서 관리하세요.
+        </p>
+        <div className="auth-features">
+          <span>01 · 실험 기록과 템플릿</span>
+          <span>02 · 시약 재고와 사용 이력</span>
+          <span>03 · 버전 관리와 검토</span>
+        </div>
+      </section>
+      <section className="auth-form">
+        <div className="auth-card">
+          <p className="eyebrow">YOUR RESEARCH STARTS HERE</p>
+          <h2>{mfaToken ? '2단계 인증' : setup ? '연구실 시작하기' : '로그인'}</h2>
+          <p className="muted">
+            {mfaToken
+              ? '인증 앱 코드 또는 복구 코드를 입력하세요.'
+              : setup
+              ? '첫 관리자 계정을 만듭니다. 예제 데이터는 생성하지 않습니다.'
+              : '계정으로 연구 공간에 접속하세요.'}
           </p>
-        </div>
-
-        {!isRegisterMode && (
-          <div style={{ marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <label style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-main)' }}>연구소(테넌트) 선택</label>
-            <select 
-              value={selectedTenant}
-              onChange={(e) => setSelectedTenant(e.target.value)}
-              style={{ padding: '0.875rem 1rem', borderRadius: '12px', border: '1px solid var(--border-color)', fontSize: '0.95rem', background: 'var(--surface-color)', color: 'var(--text-main)' }}
-            >
-              <option value="">테넌트를 선택하세요</option>
-              {tenants.map(t => (
-                <option key={t._id} value={t._id}>{t.name}</option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          
-          {isRegisterMode && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <label htmlFor="name" style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-main)' }}>이름</label>
-              <input 
-                type="text" 
-                id="name" 
-                placeholder="홍길동" 
-                className="form-input"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required={isRegisterMode}
-                style={{ padding: '0.875rem 1rem', borderRadius: '12px', border: '1px solid var(--border-color)', fontSize: '0.95rem' }}
-              />
-            </div>
+          {location.state?.notice && <p role="status" className="notice-banner">{location.state.notice}</p>}
+          {(error || loginError) && (
+            <p role="alert" className="error-banner">
+              {error || loginError}
+            </p>
           )}
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <label htmlFor="email" style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-main)' }}>이메일</label>
-            <input 
-              type="email" 
-              id="email" 
-              placeholder="name@example.com" 
-              className="form-input"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              style={{ padding: '0.875rem 1rem', borderRadius: '12px', border: '1px solid var(--border-color)', fontSize: '0.95rem' }}
-            />
-          </div>
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <label htmlFor="password" style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-main)' }}>비밀번호</label>
-              {!isRegisterMode && <a href="#" style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textDecoration: 'underline' }}>비밀번호를 잊으셨나요?</a>}
-            </div>
-            <input 
-              type="password" 
-              id="password" 
-              placeholder="••••••••" 
-              className="form-input"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={6}
-              style={{ padding: '0.875rem 1rem', borderRadius: '12px', border: '1px solid var(--border-color)', fontSize: '0.95rem' }}
-            />
-          </div>
-
-          {error && <div style={{ color: 'var(--danger)', fontSize: '0.875rem', textAlign: 'center' }}>{error}</div>}
-
-          <button type="submit" className="btn-primary" disabled={loading} style={{ marginTop: '0.5rem', width: '100%', padding: '0.875rem', borderRadius: '14px', fontSize: '1rem', fontWeight: '700', justifyContent: 'center' }}>
-            {loading ? '처리 중...' : (isRegisterMode ? '가입 신청하기' : '로그인')}
-          </button>
-        </form>
-        
-        <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
-          <button 
-            type="button" 
-            onClick={() => setIsRegisterMode(!isRegisterMode)} 
-            style={{ background: 'none', border: 'none', color: 'var(--primary-color)', fontWeight: '600', cursor: 'pointer', fontSize: '0.9rem' }}
-          >
-            {isRegisterMode ? '이미 계정이 있으신가요? 로그인' : '계정이 없으신가요? 회원가입'}
-          </button>
+          {mfaToken ? (
+            <form onSubmit={submitMfa}>
+              <label>
+                인증 코드 또는 복구 코드
+                <input
+                  autoFocus
+                  required
+                  className="form-input"
+                  autoComplete="one-time-code"
+                  value={mfaCode}
+                  onChange={(e) => setMfaCode(e.target.value)}
+                />
+              </label>
+              <div className="button-row">
+                <button className="btn-secondary" type="button" onClick={() => setMfaToken('')}>
+                  로그인으로 돌아가기
+                </button>
+                <button className="btn-primary" disabled={busy || loading}>
+                  {busy || loading ? '확인 중…' : '확인하고 로그인'}
+                </button>
+              </div>
+            </form>
+          ) : setup === null ? (
+            <button className="btn-secondary" onClick={check}>
+              연결 확인 / 다시 시도
+            </button>
+          ) : (
+            <form onSubmit={submit}>
+              {setup && (
+                <label>
+                  이름
+                  <input
+                    required
+                    name="name"
+                    className="form-input"
+                    value={form.name}
+                    onChange={change}
+                    autoComplete="name"
+                  />
+                </label>
+              )}
+              <label>
+                이메일
+                <input
+                  required
+                  name="email"
+                  type="email"
+                  className="form-input"
+                  value={form.email}
+                  onChange={change}
+                  autoComplete="username"
+                />
+              </label>
+              <label>
+                비밀번호
+                <input
+                  required
+                  minLength={setup ? 12 : undefined}
+                  maxLength={128}
+                  name="password"
+                  type="password"
+                  className="form-input"
+                  value={form.password}
+                  onChange={change}
+                  autoComplete={setup ? 'new-password' : 'current-password'}
+                />
+              </label>
+              {setup && (
+                <>
+                  <p className="muted">12자 이상으로 설정해주세요.</p>
+                  <label>
+                    최초 설정 코드 (운영 서버)
+                    <input
+                      name="setupToken"
+                      type="password"
+                      className="form-input"
+                      value={form.setupToken}
+                      onChange={change}
+                    />
+                  </label>
+                </>
+              )}
+              <button className="btn-primary" disabled={busy || loading}>
+                {busy || loading ? '처리 중…' : setup ? '관리자 계정 만들기' : '연구 공간 열기'}
+              </button>
+            </form>
+          )}
+          {!setup && !mfaToken && <Link className="view-all" to="/reset-password">비밀번호를 잊으셨나요?</Link>}
+          {!setup && !mfaToken && oidcEnabled && <div className="oidc-login"><a className="btn-outline" href="/api/auth/oidc/start">{authProviders.oidc.label || '기관 계정으로 로그인'}</a><p className="muted">SSO 로그인에는 기관의 MFA가 적용됩니다. 전자서명에는 별도 서명 비밀번호가 필요하며, 없는 경우 초대 또는 비밀번호 재설정 절차에서 설정할 수 있습니다.</p></div>}
         </div>
-
-        <div style={{ marginTop: '2rem', textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-          가입하시면 LabHub의 <a href="#" style={{ textDecoration: 'underline', color: 'var(--text-main)' }}>이용약관</a> 및 <br/>
-          <a href="#" style={{ textDecoration: 'underline', color: 'var(--text-main)' }}>개인정보 처리방침</a>에 동의하게 됩니다.
-        </div>
-      </div>
-    </div>
+      </section>
+    </main>
   );
 }
-
-export default Login;

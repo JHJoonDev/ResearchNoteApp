@@ -1,0 +1,15 @@
+{
+  "name": "@labhub/instrument-agent",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "labhub-agent": "./bin/labhub-agent.js"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

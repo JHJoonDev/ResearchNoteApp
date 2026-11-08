@@ -1,363 +1,207 @@
-import React, { useEffect, useState } from 'react';
-import toast from 'react-hot-toast';
-import useAppStore from '../store/useAppStore';
-import { QRCodeSVG } from 'qrcode.react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import useAuthStore from '../store/useAuthStore';
+import { api, errorMessage } from '../lib/api';
+import { asList, recordId } from '../lib/phase3';
+import { formatQuantity } from '../lib/display';
 
-function LIMS() {
-  const { limsData, loading, fetchLimsData, createLimsItem, updateLimsItem, deleteLimsItem } = useAppStore();
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState('create');
-  const [activeTab, setActiveTab] = useState('info');
-  const [selectedItem, setSelectedItem] = useState(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    brand: '',
-    cas: '',
-    stockValue: 0,
-    unit: 'L',
-    status: '양호',
-    expiryDate: ''
-  });
-  const [filterStatus, setFilterStatus] = useState('전체');
+const emptyReceipt = () => ({ lotNumber: '', amount: '', supplierLot: '', expirationDate: '', receivedAt: '', locationId: '', location: '' });
+
+export default function LIMS() {
+  const { user } = useAuthStore();
+  const [items, setItems] = useState([]);
+  const [lots, setLots] = useState([]);
+  const [locations, setLocations] = useState([]);
+  const [selectedId, setSelectedId] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [showCreate, setShowCreate] = useState(false);
+  const [showReceive, setShowReceive] = useState(false);
+  const [newItem, setNewItem] = useState({ name: '', brand: '', cas: '', lotNumber: '', amount: '', minimumStock: '0', unit: 'ea', expirationDate: '', location: '' });
+  const [receipt, setReceipt] = useState(emptyReceipt);
+  const [adjustingId, setAdjustingId] = useState('');
+  const [adjustment, setAdjustment] = useState({ delta: '', reason: '' });
+  const [editingLot, setEditingLot] = useState(null);
+
+  const selected = useMemo(() => items.find((item) => recordId(item) === selectedId) || null, [items, selectedId]);
+  const canWrite = user?.role !== 'viewer';
+
+  const loadItems = useCallback(async (preferredId) => {
+    const { data } = await api.get('/lims');
+    const nextItems = asList(data);
+    setItems(nextItems);
+    setSelectedId((current) => {
+      const candidate = preferredId || current;
+      return nextItems.some((item) => recordId(item) === candidate) ? candidate : recordId(nextItems[0]);
+    });
+    return nextItems;
+  }, []);
+
+  const loadLots = useCallback(async (reagentId) => {
+    if (!reagentId) {
+      setLots([]);
+      return;
+    }
+    const { data } = await api.get(`/lims/${encodeURIComponent(reagentId)}/lots`);
+    setLots(asList(data));
+  }, []);
 
   useEffect(() => {
-    fetchLimsData();
-  }, [fetchLimsData]);
+    let active = true;
+    Promise.all([api.get('/lims'), api.get('/locations')])
+      .then(([limsResponse, locationResponse]) => {
+        if (!active) return;
+        const nextItems = asList(limsResponse.data);
+        setItems(nextItems);
+        setSelectedId(recordId(nextItems[0]));
+        setLocations(asList(locationResponse.data));
+      })
+      .catch((e) => active && setError(errorMessage(e)))
+      .finally(() => active && setLoading(false));
+    return () => { active = false; };
+  }, []);
 
-  const handleOpenModal = (mode, item = null) => {
-    setModalMode(mode);
-    setSelectedItem(item);
-    setActiveTab('info');
-    if (mode === 'edit' && item) {
-      setFormData({
-        name: item.name,
-        brand: item.brand,
-        cas: item.cas,
-        stockValue: item.stockValue || 0,
-        unit: item.unit || 'L',
-        status: item.status,
-        expiryDate: item.expiryDate || ''
+  useEffect(() => {
+    let active = true;
+    if (!selectedId) {
+      setLots([]);
+      return () => { active = false; };
+    }
+    api.get(`/lims/${encodeURIComponent(selectedId)}/lots`)
+      .then(({ data }) => active && setLots(asList(data)))
+      .catch((e) => active && setError(errorMessage(e)));
+    return () => { active = false; };
+  }, [selectedId]);
+
+  const run = async (action, successMessage) => {
+    setBusy(true);
+    setError('');
+    setNotice('');
+    try {
+      await action();
+      if (successMessage) setNotice(successMessage);
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const createItem = (event) => {
+    event.preventDefault();
+    run(async () => {
+      const { data } = await api.post('/lims', {
+        name: newItem.name.trim(), brand: newItem.brand.trim(), cas: newItem.cas.trim(),
+        lotNumber: newItem.lotNumber.trim() || undefined, stockValue: Number(newItem.amount),
+        minimumStock: Number(newItem.minimumStock || 0),
+        unit: newItem.unit, expirationDate: newItem.expirationDate || undefined,
+        location: newItem.location.trim() || undefined,
       });
-    } else {
-      setFormData({
-        name: '',
-        brand: '',
-        cas: '',
-        stockValue: 0,
-        unit: 'L',
-        status: '양호',
-        expiryDate: ''
+      await loadItems(recordId(data));
+      setNewItem({ name: '', brand: '', cas: '', lotNumber: '', amount: '', minimumStock: '0', unit: 'ea', expirationDate: '', location: '' });
+      setShowCreate(false);
+    }, '시약과 초기 LOT를 등록했습니다.');
+  };
+
+  const receiveLot = (event) => {
+    event.preventDefault();
+    if (!selected) return;
+    run(async () => {
+      await api.post(`/lims/${encodeURIComponent(recordId(selected))}/lots`, {
+        lotNumber: receipt.lotNumber.trim(), amount: Number(receipt.amount),
+        supplierLot: receipt.supplierLot.trim() || undefined,
+        expirationDate: receipt.expirationDate || undefined,
+        receivedAt: receipt.receivedAt || undefined,
+        locationId: receipt.locationId || undefined,
+        location: receipt.location.trim() || undefined,
       });
-    }
-    setIsModalOpen(true);
+      await Promise.all([loadItems(recordId(selected)), loadLots(recordId(selected))]);
+      setReceipt(emptyReceipt());
+      setShowReceive(false);
+    }, '입고 LOT를 등록했습니다.');
   };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
+  const adjustLot = (event, lot) => {
+    event.preventDefault();
+    run(async () => {
+      await api.post(`/lims/lots/${encodeURIComponent(recordId(lot))}/adjust`, {
+        delta: Number(adjustment.delta), reason: adjustment.reason.trim(), version: lot.version,
+      });
+      await Promise.all([loadItems(recordId(selected)), loadLots(recordId(selected))]);
+      setAdjustingId('');
+      setAdjustment({ delta: '', reason: '' });
+    }, 'LOT 수량을 조정했습니다.');
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+  const saveLot = (event) => {
+    event.preventDefault();
+    if (!editingLot) return;
+    run(async () => {
+      await api.put(`/lims/lots/${encodeURIComponent(recordId(editingLot))}`, {
+        version: editingLot.version,
+        ...(['사용가능', '폐기'].includes(editingLot.status) ? { status: editingLot.status } : {}),
+        locationId: editingLot.locationId || null,
+        location: editingLot.location || '',
+        expirationDate: editingLot.expirationDate || null,
+      });
+      await Promise.all([loadItems(recordId(selected)), loadLots(recordId(selected))]);
+      setEditingLot(null);
+    }, 'LOT 정보를 저장했습니다.');
   };
 
-  const handleSave = async (e) => {
-    e.preventDefault();
-    if (modalMode === 'create') {
-      await createLimsItem(formData);
-    } else {
-      await updateLimsItem(selectedItem?.id, formData);
-    }
-    handleCloseModal();
-  };
-
-  const handleDelete = async (id) => {
-    if (window.confirm('정말 삭제하시겠습니까?')) {
-      await deleteLimsItem(id);
-      toast.success('삭제되었습니다.');
-    }
-  };
-
-  const getStatusStyle = (status) => {
-    if (status === '부족') return { background: '#FEF3C7', color: '#D97706' };
-    if (status === '만료 예정' || status === '만료') return { background: '#FEE2E2', color: '#DC2626' };
-    return { background: '#D1FAE5', color: '#059669' };
-  };
-
-  const filteredData = limsData.filter(item => {
-    if (filterStatus === '전체') return true;
-    return item.status === filterStatus;
-  });
-
-  const handleExportCSV = () => {
-    if (limsData.length === 0) return toast.error('내보낼 데이터가 없습니다.');
-    const headers = ['시약명', '제조사', 'Cas No.', '재고량', '단위', '상태', '만료일'];
-    const csvContent = [
-      headers.join(','),
-      ...limsData.map(item => [
-        `"${item.name}"`, `"${item.brand || ''}"`, `"${item.cas || ''}"`, item.stockValue, item.unit, item.status, item.expiryDate || ''
-      ].join(','))
-    ].join('\n');
-
-    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `LIMS_재고현황_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+  const itemOptions = items.map((item) => <option key={recordId(item)} value={recordId(item)}>{item.name}</option>);
 
   return (
-    <div className="dashboard-content">
-      <div className="card-header" style={{ marginBottom: '1.5rem' }}>
-        <h1 className="page-title" style={{ marginBottom: 0 }}>시약 관리 (LIMS)</h1>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button className="btn-outline" onClick={handleExportCSV}>
-            <i className="fa-solid fa-file-csv"></i> CSV 내보내기
-          </button>
-          <button className="btn-primary" onClick={() => handleOpenModal('create')}>
-            <i className="fa-solid fa-plus"></i> 새 시약 등록
-          </button>
-        </div>
+    <div className="dashboard-content phase3-page">
+      <div className="phase3-heading">
+        <div><p className="eyebrow">INVENTORY</p><h1 className="page-title">시약 LOT 재고</h1><p className="muted">입고와 조정은 LOT 단위로 기록합니다. 총 재고는 LOT 잔량 합계입니다.</p></div>
+        {canWrite && <div className="phase3-actions"><button className="btn-outline" onClick={() => setShowCreate((value) => !value)}>새 시약</button><button className="btn-primary" disabled={!selected} onClick={() => setShowReceive((value) => !value)}>입고 등록</button></div>}
       </div>
+      {error && <p className="error-banner" role="alert">{error}</p>}
+      {notice && <p className="notice-banner" role="status">{notice}</p>}
 
-      <div className="filter-row" style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-        {['전체', '양호', '부족', '만료 예정', '만료'].map(status => (
-          <button 
-            key={status}
-            onClick={() => setFilterStatus(status)}
-            className={`btn-outline ${filterStatus === status ? 'active' : ''}`}
-            style={{ 
-              padding: '0.4rem 1.2rem', 
-              fontSize: '0.85rem',
-              backgroundColor: filterStatus === status ? 'var(--primary-color)' : 'var(--surface-color)',
-              color: filterStatus === status ? 'white' : 'var(--text-main)',
-              borderColor: filterStatus === status ? 'var(--primary-color)' : 'var(--border-color)'
-            }}
-          >
-            {status}
-          </button>
-        ))}
-      </div>
-      
-      <div className="card">
-        {loading ? (
-          <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-color)' }}>
-            <span className="spinner" style={{ display: 'inline-block', width: '1.5rem', height: '1.5rem', border: '3px solid var(--border-color)', borderTopColor: 'var(--primary-color)', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></span>
-            <p style={{ marginTop: '1rem' }}>데이터를 불러오는 중입니다...</p>
-          </div>
-        ) : (
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>시약명</th>
-                <th>제조사 / Cas No.</th>
-                <th>재고</th>
-                <th>상태</th>
-                <th>작업</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredData.length === 0 ? (
-                <tr>
-                  <td colSpan="5" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>조건에 맞는 시약이 없습니다.</td>
-                </tr>
-              ) : (
-                filteredData.map((item) => (
-                  <tr key={item.id} onClick={() => handleOpenModal('edit', item)} style={{ cursor: 'pointer' }}>
-                    <td style={{ fontWeight: '600' }}>{item.name}</td>
-                    <td>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                        <span>{item.brand}</span>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{item.cas}</span>
-                      </div>
-                    </td>
-                    <td>
-                      <span className={`stock-indicator ${item.stockValue > 10 ? 'stock-high' : item.stockValue > 0 ? 'stock-low' : 'stock-none'}`}>
-                        {item.stockValue} {item.unit}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`item-status status-${item.status === '양호' ? 'done' : item.status === '부족' ? 'warning' : 'danger'}`}>
-                        {item.status}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="action-btns">
-                        <button className="btn-icon" onClick={(e) => { e.stopPropagation(); handleOpenModal('edit', item); }}>
-                          <i className="fa-solid fa-edit"></i>
-                        </button>
-                        <button className="btn-icon delete" onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }}>
-                          <i className="fa-solid fa-trash"></i>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        )}
+      {showCreate && canWrite && <section className="card phase3-card"><h2>시약과 초기 LOT 등록</h2><form className="phase3-form-grid" onSubmit={createItem}>
+        <label>시약명<input className="form-input" required value={newItem.name} onChange={(e) => setNewItem({ ...newItem, name: e.target.value })} /></label>
+        <label>제조사<input className="form-input" value={newItem.brand} onChange={(e) => setNewItem({ ...newItem, brand: e.target.value })} /></label>
+        <label>CAS 번호<input className="form-input" value={newItem.cas} onChange={(e) => setNewItem({ ...newItem, cas: e.target.value })} /></label>
+        <label>초기 LOT 번호<input className="form-input" placeholder="미입력 시 자동 생성" value={newItem.lotNumber} onChange={(e) => setNewItem({ ...newItem, lotNumber: e.target.value })} /></label>
+        <label>수량<input className="form-input" type="number" min="0" step="any" required value={newItem.amount} onChange={(e) => setNewItem({ ...newItem, amount: e.target.value })} /></label>
+        <label>최소 재고 알림 기준<input className="form-input" type="number" min="0" step="any" value={newItem.minimumStock} onChange={(e) => setNewItem({ ...newItem, minimumStock: e.target.value })} /></label>
+        <label>단위<select className="form-input" value={newItem.unit} onChange={(e) => setNewItem({ ...newItem, unit: e.target.value })}>{['ea', 'mL', 'L', 'mg', 'g', 'kg'].map((unit) => <option key={unit}>{unit}</option>)}</select></label>
+        <label>유효기한<input className="form-input" type="date" value={newItem.expirationDate} onChange={(e) => setNewItem({ ...newItem, expirationDate: e.target.value })} /></label>
+        <label>보관 위치<input className="form-input" placeholder="선택 입력" value={newItem.location} onChange={(e) => setNewItem({ ...newItem, location: e.target.value })} /></label>
+        <div className="phase3-form-actions"><button type="button" className="btn-secondary" onClick={() => setShowCreate(false)}>취소</button><button className="btn-primary" disabled={busy}>{busy ? '저장 중…' : '시약 등록'}</button></div>
+      </form></section>}
 
-        {/* Pagination UI */}
-        {!loading && useAppStore.getState().limsPagination && useAppStore.getState().limsPagination.totalPages > 1 && (
-          <div style={{ display: 'flex', justifyContent: 'center', marginTop: '1.5rem', gap: '0.5rem', alignItems: 'center' }}>
-            <button 
-              className="btn-outline" 
-              disabled={useAppStore.getState().limsPagination.page === 1}
-              onClick={() => fetchLimsData(useAppStore.getState().limsPagination.page - 1, 10)}
-              style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
-            >
-              이전
-            </button>
-            <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-              {useAppStore.getState().limsPagination.page} / {useAppStore.getState().limsPagination.totalPages}
-            </span>
-            <button 
-              className="btn-outline" 
-              disabled={useAppStore.getState().limsPagination.page === useAppStore.getState().limsPagination.totalPages}
-              onClick={() => fetchLimsData(useAppStore.getState().limsPagination.page + 1, 10)}
-              style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
-            >
-              다음
-            </button>
-          </div>
-        )}
-      </div>
+      {showReceive && selected && <section className="card phase3-card"><h2>{selected.name} 입고</h2><form className="phase3-form-grid" onSubmit={receiveLot}>
+        <label>LOT 번호<input className="form-input" required value={receipt.lotNumber} onChange={(e) => setReceipt({ ...receipt, lotNumber: e.target.value })} /></label>
+        <label>입고 수량<input className="form-input" type="number" min="0.000001" step="any" required value={receipt.amount} onChange={(e) => setReceipt({ ...receipt, amount: e.target.value })} /></label>
+        <label>공급사 LOT<input className="form-input" value={receipt.supplierLot} onChange={(e) => setReceipt({ ...receipt, supplierLot: e.target.value })} /></label>
+        <label>입고일<input className="form-input" type="date" value={receipt.receivedAt} onChange={(e) => setReceipt({ ...receipt, receivedAt: e.target.value })} /></label>
+        <label>유효기한<input className="form-input" type="date" value={receipt.expirationDate} onChange={(e) => setReceipt({ ...receipt, expirationDate: e.target.value })} /></label>
+        <label>위치 트리<select className="form-input" value={receipt.locationId} onChange={(e) => setReceipt({ ...receipt, locationId: e.target.value })}><option value="">위치 선택 안 함</option>{locations.map((location) => <option key={recordId(location)} value={recordId(location)}>{location.name}</option>)}</select></label>
+        {!receipt.locationId && <label>자유 입력 위치<input className="form-input" value={receipt.location} onChange={(e) => setReceipt({ ...receipt, location: e.target.value })} /></label>}
+        <div className="phase3-form-actions"><button type="button" className="btn-secondary" onClick={() => setShowReceive(false)}>취소</button><button className="btn-primary" disabled={busy}>{busy ? '저장 중…' : '입고 등록'}</button></div>
+      </form></section>}
 
-      {isModalOpen && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h2>{modalMode === 'create' ? '새 시약 등록' : '시약 정보 및 이력'}</h2>
-              <button className="close-btn" onClick={handleCloseModal}>&times;</button>
-            </div>
-            
-            {modalMode === 'edit' && (
-              <div style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid var(--border-color)', padding: '0 1.5rem', marginBottom: '1rem' }}>
-                <button 
-                  type="button"
-                  style={{ padding: '0.75rem 0', background: 'none', border: 'none', borderBottom: activeTab === 'info' ? '2px solid var(--primary-color)' : '2px solid transparent', color: activeTab === 'info' ? 'var(--primary-color)' : 'var(--text-muted)', fontWeight: activeTab === 'info' ? '600' : '500', cursor: 'pointer' }}
-                  onClick={() => setActiveTab('info')}
-                >
-                  기본 정보
-                </button>
-                <button 
-                  type="button"
-                  style={{ padding: '0.75rem 0', background: 'none', border: 'none', borderBottom: activeTab === 'history' ? '2px solid var(--primary-color)' : '2px solid transparent', color: activeTab === 'history' ? 'var(--primary-color)' : 'var(--text-muted)', fontWeight: activeTab === 'history' ? '600' : '500', cursor: 'pointer' }}
-                  onClick={() => setActiveTab('history')}
-                >
-                  입출고 이력
-                </button>
-              </div>
-            )}
+      <section className="card phase3-card phase3-toolbar">
+        <label>시약 선택<select className="form-input" value={selectedId} onChange={(e) => setSelectedId(e.target.value)}><option value="">시약 선택</option>{itemOptions}</select></label>
+        {selected && <div className="inventory-total"><span>현재 총 재고</span><strong>{formatQuantity(selected.stockValue)} {selected.unit}</strong></div>}
+      </section>
 
-            {activeTab === 'info' ? (
-              <form onSubmit={handleSave}>
-                <div className="modal-body">
-                  {modalMode === 'edit' && selectedItem && (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1.5rem', marginBottom: '1.5rem', padding: '1rem', background: 'var(--bg-color)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                      <div style={{ background: '#fff', padding: '0.5rem', borderRadius: '4px', display: 'inline-block' }}>
-                        <QRCodeSVG value={`lims:${selectedItem.id}`} size={80} level="H" />
-                      </div>
-                      <div>
-                        <h4 style={{ margin: '0 0 0.25rem 0', color: 'var(--text-main)', fontSize: '0.95rem' }}>시약 식별 QR 코드</h4>
-                        <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>스마트폰 또는 바코드 스캐너로 스캔하여<br/>재고를 빠르게 조회할 수 있습니다.</p>
-                        <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--primary-color)', fontWeight: '600' }}>ID: {selectedItem.id}</div>
-                      </div>
-                    </div>
-                  )}
-                  <div className="form-group">
-                    <label>시약명</label>
-                    <input type="text" name="name" className="form-input" value={formData.name} onChange={handleInputChange} required />
-                  </div>
-                  <div className="form-group">
-                    <label>제조사</label>
-                    <input type="text" name="brand" className="form-input" value={formData.brand} onChange={handleInputChange} />
-                  </div>
-                  <div className="form-group">
-                    <label>Cas No.</label>
-                    <input type="text" name="cas" className="form-input" value={formData.cas} onChange={handleInputChange} />
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem' }}>
-                    <div className="form-group">
-                      <label>재고량 (숫자만)</label>
-                      <input type="number" name="stockValue" className="form-input" value={formData.stockValue} onChange={handleInputChange} required />
-                    </div>
-                    <div className="form-group">
-                      <label>단위</label>
-                      <select name="unit" className="form-input" value={formData.unit} onChange={handleInputChange}>
-                        <option value="L">L</option>
-                        <option value="mL">mL</option>
-                        <option value="kg">kg</option>
-                        <option value="g">g</option>
-                        <option value="mg">mg</option>
-                        <option value="ea">ea</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                    <div className="form-group">
-                      <label>상태</label>
-                      <select name="status" className="form-input" value={formData.status} onChange={handleInputChange}>
-                        <option value="양호">양호</option>
-                        <option value="부족">부족</option>
-                        <option value="만료 예정">만료 예정</option>
-                        <option value="만료">만료</option>
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label>사용 만료 기한</label>
-                      <input type="date" name="expiryDate" className="form-input" value={formData.expiryDate} onChange={handleInputChange} style={{ fontFamily: 'inherit' }} />
-                    </div>
-                  </div>
-                </div>
-                <div className="modal-footer">
-                  <button type="button" className="btn-secondary" onClick={handleCloseModal}>취소</button>
-                  <button type="submit" className="btn-primary">저장</button>
-                </div>
-              </form>
-            ) : (
-              <div className="modal-body" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
-                <table className="data-table" style={{ fontSize: '0.9rem' }}>
-                  <thead>
-                    <tr>
-                      <th>일시</th>
-                      <th>유형</th>
-                      <th>수량</th>
-                      <th>작업자</th>
-                      <th>사유</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {selectedItem?.history?.length > 0 ? (
-                      selectedItem.history.map((h, idx) => (
-                        <tr key={idx}>
-                          <td>{new Date(h.date).toLocaleString()}</td>
-                          <td>
-                            <span className={`status-${h.action === '입고' ? 'done' : 'warning'}`} style={{ padding: '0.2rem 0.5rem', borderRadius: '12px', fontSize: '0.8rem' }}>
-                              {h.action}
-                            </span>
-                          </td>
-                          <td>{h.amount} {selectedItem.unit}</td>
-                          <td>{h.user}</td>
-                          <td>{h.reason || '-'}</td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr><td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-muted)' }}>기록이 없습니다.</td></tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      <section className="card phase3-card">
+        <div className="card-header"><h2>LOT 목록</h2><span className="muted">{lots.length}개</span></div>
+        {loading ? <p className="empty-state">재고를 불러오는 중…</p> : !selected ? <p className="empty-state">등록된 시약이 없습니다.</p> : !lots.length ? <p className="empty-state">LOT이 없습니다.</p> : <div className="table-scroll"><table className="data-table"><thead><tr><th>시약</th><th>LOT</th><th>공급사 LOT</th><th>잔량</th><th>입고일</th><th>유효기한</th><th>상태</th><th>위치</th>{canWrite && <th>작업</th>}</tr></thead><tbody>{lots.map((lot) => {
+          const id = recordId(lot);
+          const expired = lot.expirationDate && new Date(lot.expirationDate) < new Date(new Date().toDateString());
+          const status = expired ? '만료' : lot.status || '사용가능';
+          const unusable = ['소진', '폐기', '만료'].includes(status);
+          return <tr key={id}><td>{selected.name}</td><td><strong>{lot.lotNumber}</strong></td><td>{lot.supplierLot || '—'}</td><td>{formatQuantity(lot.remainingAmount)} {lot.unit || selected.unit}</td><td>{lot.receivedAt ? new Date(lot.receivedAt).toLocaleDateString() : '—'}</td><td>{lot.expirationDate ? new Date(lot.expirationDate).toLocaleDateString() : '—'}</td><td><span className={`item-status ${unusable ? 'status-danger' : 'status-done'}`}>{status}</span></td><td>{lot.location || locations.find((location) => recordId(location) === lot.locationId)?.name || '—'}</td>{canWrite && <td><div className="phase3-row-actions"><button className="btn-small" onClick={() => { setAdjustingId(id); setEditingLot(null); }}>수량 조정</button><button className="btn-small" onClick={() => { setEditingLot({ ...lot }); setAdjustingId(''); }}>수정</button></div></td>}</tr>;
+        })}</tbody></table></div>}
+        {adjustingId && <form className="phase3-inline-form" onSubmit={(event) => adjustLot(event, lots.find((lot) => recordId(lot) === adjustingId))}><h3>LOT 수량 조정</h3><label>증감량 (+/-)<input className="form-input" type="number" step="any" required value={adjustment.delta} onChange={(e) => setAdjustment({ ...adjustment, delta: e.target.value })} /></label><label>사유<input className="form-input" required value={adjustment.reason} onChange={(e) => setAdjustment({ ...adjustment, reason: e.target.value })} /></label><button className="btn-primary" disabled={busy}>조정 저장</button><button type="button" className="btn-secondary" onClick={() => setAdjustingId('')}>취소</button></form>}
+        {editingLot && <form className="phase3-inline-form" onSubmit={saveLot}><h3>LOT 정보 수정</h3>{['사용가능', '폐기'].includes(editingLot.status) && <label>상태<select className="form-input" value={editingLot.status} onChange={(e) => setEditingLot({ ...editingLot, status: e.target.value })}><option value="사용가능">사용가능</option><option value="폐기">폐기</option></select></label>}{['소진', '만료'].includes(editingLot.status) && <p className="muted">상태는 수량과 유효기한에 따라 서버가 계산합니다: {editingLot.status}</p>}<label>위치 트리<select className="form-input" value={editingLot.locationId || ''} onChange={(e) => setEditingLot({ ...editingLot, locationId: e.target.value, location: '' })}><option value="">트리 위치 없음</option>{locations.map((location) => <option key={recordId(location)} value={recordId(location)}>{location.name}</option>)}</select></label><label>자유 입력 위치<input className="form-input" value={editingLot.location || ''} onChange={(e) => setEditingLot({ ...editingLot, location: e.target.value, locationId: '' })} /></label><label>유효기한<input className="form-input" type="date" value={editingLot.expirationDate ? String(editingLot.expirationDate).slice(0, 10) : ''} onChange={(e) => setEditingLot({ ...editingLot, expirationDate: e.target.value })} /></label><button className="btn-primary" disabled={busy}>변경 저장</button><button type="button" className="btn-secondary" onClick={() => setEditingLot(null)}>취소</button></form>}
+      </section>
     </div>
   );
 }
-
-export default LIMS;
