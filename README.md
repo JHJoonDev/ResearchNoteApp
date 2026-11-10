@@ -20,7 +20,7 @@ LabHub는 연구실의 하루를 한곳에 모읍니다. 블록 편집기로 실
 <table>
   <tr>
     <td width="50%"><img src="docs/images/note-editor.png" alt="블록 편집기"><br><sub>블록 편집기</sub></td>
-    <td width="50%"><img src="docs/images/protocol-run.png" alt="프로토콜 실행"><br><sub>프로토콜 단계별 실행</sub></td>
+    <td width="50%"><img src="docs/images/approval-flow.png" alt="승인 단계"><br><sub>승인 단계와 봉인 상태</sub></td>
   </tr>
 </table>
 

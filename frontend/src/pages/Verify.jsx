@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api, errorMessage } from '../lib/api';
 import { formatTimestampStatus } from '../lib/display';
+import { BrandMark, Callout, DropZone } from '../components/ui';
 
 async function sha256(file) {
   const bytes = await file.arrayBuffer();
@@ -45,9 +46,10 @@ export default function Verify() {
       : null;
   return (
     <main className="dashboard-content public-verify">
+      <BrandMark />
       <div className="page-heading">
         <div>
-          <p className="eyebrow">PUBLIC VERIFICATION</p>
+          <p className="eyebrow">공개 검증</p>
           <h1 className="page-title">봉인 공개 검증</h1>
           <p className="muted">공개 검증 API가 반환한 결과만 표시합니다. 파일은 서버로 전송하지 않습니다.</p>
         </div>
@@ -65,9 +67,7 @@ export default function Verify() {
         {!result && !error && <p role="status">검증 결과를 불러오는 중…</p>}
         {result && (
           <>
-            <p className={result.valid ? 'verify-result valid' : 'verify-result invalid'}>
-              {result.valid ? '검증 유효' : '검증 실패'}
-            </p>
+            <Callout tone={result.valid ? 'success' : 'danger'} title={result.valid ? '검증 유효' : '검증 실패'} className={result.valid ? 'verify-result valid' : 'verify-result invalid'} />
             <dl className="verify-summary">
               <div>
                 <dt>봉인 해시</dt>
@@ -109,10 +109,12 @@ export default function Verify() {
           파일은 브라우저 안에서만 처리합니다. 봉인 해시와 PDF 해시는 서로 다른 값이며, PDF 일치 여부는
           아래 봉인 PDF SHA-256과 대조합니다.
         </p>
+        <DropZone onFiles={(files) => choosePdf(files[0])} aria-label="PDF 선택">
         <label className="upload-label">
           PDF 선택
           <input type="file" accept="application/pdf,.pdf" onChange={(e) => choosePdf(e.target.files[0])} />
         </label>
+        </DropZone>
         {fileError && <p role="alert" className="error-banner">{fileError}</p>}
         {pdfHash && (
           <div className="pdf-hash-check" aria-live="polite">

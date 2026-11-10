@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import useAuthStore from '../store/useAuthStore';
 import { docToPlainText } from '../lib/noteFormat';
 import { api, errorMessage } from '../lib/api';
+import { Trash2 } from 'lucide-react';
+import { Card, StatusPill } from './ui';
 
 const commentId = (comment) => comment.id || comment._id;
 
@@ -71,7 +73,7 @@ export default function CommentPanel({ note, doc, canManage }) {
   };
 
   return (
-    <section className="comment-panel">
+    <Card className="comment-panel">
       <div className="card-header"><h3>댓글과 토론</h3><span className="muted">{comments.length}개</span></div>
       {error && <p role="alert" className="error-banner">{error}</p>}
       {user.role !== 'viewer' && (
@@ -98,8 +100,8 @@ export default function CommentPanel({ note, doc, canManage }) {
               {user.role !== 'viewer' && <button className="btn-outline" onClick={() => { setReplyTo(commentId(item)); setReplyBody(''); }}>답글</button>}
               {mayEdit(item) && <button className="btn-outline" onClick={() => { setEditing(commentId(item)); setEditBody(item.body); }}>수정</button>}
               {mayDelete(item) && !item.resolvedAt && <button className="btn-outline" onClick={() => handle(() => api.post(`/comments/${commentId(item)}/resolve`, {}))}>해결</button>}
-              {mayDelete(item) && <button className="btn-outline" onClick={() => { if (window.confirm('댓글을 삭제할까요?')) handle(() => api.delete(`/comments/${commentId(item)}`)); }}>삭제</button>}
-              {item.resolvedAt && <span className="status-pill status-approved">해결됨</span>}
+              {mayDelete(item) && <button className="btn-ghost" aria-label="삭제" onClick={() => { if (window.confirm('댓글을 삭제할까요?')) handle(() => api.delete(`/comments/${commentId(item)}`)); }}><Trash2 aria-hidden="true" /></button>}
+              {item.resolvedAt && <StatusPill tone="success">해결됨</StatusPill>}
             </div>
           </div>
           {replies(commentId(item)).map((reply) => (
@@ -108,6 +110,6 @@ export default function CommentPanel({ note, doc, canManage }) {
           {replyTo === commentId(item) && <form className="comment-reply-form" onSubmit={postReply}><label>답글<textarea required className="form-input" value={replyBody} onChange={(e) => setReplyBody(e.target.value)} /></label><div className="button-row"><button className="btn-primary" disabled={busy || !replyBody.trim()}>답글 등록</button><button type="button" className="btn-outline" onClick={() => setReplyTo(null)}>취소</button></div></form>}
         </article>
       ))}
-    </section>
+    </Card>
   );
 }

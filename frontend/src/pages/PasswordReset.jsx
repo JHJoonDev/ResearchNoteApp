@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, errorMessage } from '../lib/api';
+import { BrandMark } from '../components/ui';
 
 export default function PasswordReset() {
   const [token, setToken] = useState(() => window.location.hash.slice(1));
@@ -48,7 +49,8 @@ export default function PasswordReset() {
     <main className="auth-page">
       <section className="auth-form">
         <div className="auth-card">
-          <p className="eyebrow">ACCOUNT RECOVERY</p>
+          <BrandMark />
+          <p className="eyebrow">계정 복구</p>
           <h1>{token ? '새 비밀번호 설정' : '비밀번호 재설정'}</h1>
           <p className="muted">{token ? '메일로 받은 링크에서 새 비밀번호를 설정합니다.' : '계정이 있는 경우에만 재설정 링크를 전송합니다.'}</p>
           {error && <p role="alert" className="error-banner">{error}</p>}

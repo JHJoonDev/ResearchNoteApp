@@ -4,16 +4,16 @@
 .labhub-note-editor {
   display: flex;
   flex-direction: column;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--border-strong, #cfd6d3);
   border-radius: 8px;
-  background-color: #ffffff;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background-color: var(--surface, #ffffff);
+  font-family: var(--font-sans, "Pretendard", sans-serif);
   position: relative;
 }
 
 .labhub-note-editor.is-readonly {
-  border-color: #e5e7eb;
-  background-color: #fafafa;
+  border-color: var(--border, #e3e7e5);
+  background-color: var(--surface, #ffffff);
 }
 
 /* 툴바 */
@@ -23,8 +23,8 @@
   align-items: center;
   gap: 4px;
   padding: 8px 12px;
-  background-color: #f9fafb;
-  border-bottom: 1px solid #e5e7eb;
+  background-color: var(--surface-subtle, #f7f8f8);
+  border-bottom: 1px solid var(--border, #e3e7e5);
   border-top-left-radius: 8px;
   border-top-right-radius: 8px;
 }
@@ -39,22 +39,22 @@
   border: 1px solid transparent;
   border-radius: 4px;
   background-color: transparent;
-  color: #374151;
+  color: var(--text-2, #4b5753);
   font-size: 13px;
   cursor: pointer;
   user-select: none;
-  transition: all 0.15s ease;
+  transition: background 120ms ease, color 120ms ease;
 }
 
 .toolbar-btn:hover:not(:disabled) {
-  background-color: #e5e7eb;
-  color: #111827;
+  background-color: var(--border, #e3e7e5);
+  color: var(--text, #16201d);
 }
 
 .toolbar-btn.is-active {
-  background-color: #dbeafe;
-  color: #1d4ed8;
-  border-color: #bfdbfe;
+  background-color: var(--accent-soft, #e2efec);
+  color: var(--accent-ink, #0b5a51);
+  border-color: var(--accent, #0f6e63);
 }
 
 .toolbar-btn:disabled {
@@ -65,18 +65,18 @@
 .toolbar-select {
   height: 28px;
   padding: 2px 8px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--border-strong, #cfd6d3);
   border-radius: 4px;
-  background-color: #ffffff;
+  background-color: var(--surface, #ffffff);
   font-size: 13px;
-  color: #374151;
+  color: var(--text-2, #4b5753);
   cursor: pointer;
 }
 
 .toolbar-divider {
   width: 1px;
   height: 18px;
-  background-color: #d1d5db;
+  background-color: var(--border-strong, #cfd6d3);
   margin: 0 4px;
 }
 
@@ -90,7 +90,7 @@
   outline: none;
   min-height: 200px;
   line-height: 1.6;
-  color: #1f2937;
+  color: var(--text, #16201d);
 }
 
 .ProseMirror p {
@@ -116,31 +116,31 @@
 }
 
 .ProseMirror blockquote {
-  border-left: 3px solid #3b82f6;
+  border-left: 3px solid var(--accent, #0f6e63);
   padding-left: 12px;
   margin: 1em 0;
-  color: #4b5563;
+  color: var(--text-2, #4b5753);
   font-style: italic;
 }
 
 .ProseMirror pre {
-  background-color: #1f2937;
-  color: #f9fafb;
+  background-color: var(--surface-subtle, #f7f8f8);
+  color: var(--text, #16201d);
   padding: 12px;
   border-radius: 6px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--font-mono, "JetBrains Mono", monospace);
   font-size: 13px;
   overflow-x: auto;
   margin: 1em 0;
 }
 
 .ProseMirror code {
-  background-color: #f3f4f6;
-  color: #ef4444;
+  background-color: var(--surface-subtle, #f7f8f8);
+  color: var(--accent-ink, #0b5a51);
   padding: 2px 4px;
   border-radius: 4px;
   font-size: 0.9em;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--font-mono, "JetBrains Mono", monospace);
 }
 
 .ProseMirror pre code {
@@ -183,30 +183,30 @@
 
 .ProseMirror th,
 .ProseMirror td {
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--border-strong, #cfd6d3);
   padding: 8px 12px;
   vertical-align: top;
   position: relative;
 }
 
 .ProseMirror th {
-  background-color: #f3f4f6;
+  background-color: var(--surface-subtle, #f7f8f8);
   font-weight: 600;
   text-align: left;
 }
 
 /* 인라인 아톰: 멘션, 노트링크, 시약 */
 .mention {
-  background-color: #e0f2fe;
-  color: #0369a1;
+  background-color: var(--accent-soft, #e2efec);
+  color: var(--accent-ink, #0b5a51);
   padding: 2px 6px;
   border-radius: 4px;
   font-weight: 500;
 }
 
 .note-link {
-  background-color: #fef3c7;
-  color: #b45309;
+  background-color: var(--warning-soft, #fbf3e3);
+  color: var(--warning-ink, #855d13);
   padding: 2px 6px;
   border-radius: 4px;
   text-decoration: underline;
@@ -214,8 +214,8 @@
 }
 
 .reagent-ref {
-  background-color: #dcfce7;
-  color: #15803d;
+  background-color: var(--success-soft, #e8f4ec);
+  color: var(--success-ink, #176c3a);
   padding: 2px 6px;
   border-radius: 4px;
   font-weight: 500;
@@ -233,7 +233,7 @@
   justify-content: center;
   padding: 12px 0;
   margin: 1em 0;
-  background-color: #f9fafb;
+  background-color: var(--surface-subtle, #f7f8f8);
   border-radius: 6px;
 }
 
@@ -248,7 +248,7 @@
   max-width: 100%;
   height: auto;
   border-radius: 4px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border, #e3e7e5);
 }
 
 .note-image-uploading {
@@ -256,10 +256,10 @@
   align-items: center;
   justify-content: center;
   padding: 16px;
-  border: 2px dashed #93c5fd;
+  border: 2px dashed var(--border-strong, #cfd6d3);
   border-radius: 6px;
-  background-color: #eff6ff;
-  color: #2563eb;
+  background-color: var(--accent-soft, #e2efec);
+  color: var(--accent-ink, #0b5a51);
   font-size: 14px;
   font-weight: 500;
   margin: 8px 0;
@@ -267,10 +267,10 @@
 
 /* 자동완성 제안 팝업 */
 .note-suggestion-popup {
-  background-color: #ffffff;
-  border: 1px solid #d1d5db;
+  background-color: var(--surface, #ffffff);
+  border: 1px solid var(--border-strong, #cfd6d3);
   border-radius: 6px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-pop, 0 8px 24px rgb(16 24 22 / .12));
   padding: 4px;
   min-width: 180px;
   max-height: 240px;
@@ -287,22 +287,45 @@
   background: none;
   border-radius: 4px;
   font-size: 13px;
-  color: #374151;
+  color: var(--text-2, #4b5753);
   text-align: left;
   cursor: pointer;
 }
 
 .suggestion-item:hover,
 .suggestion-item.is-selected {
-  background-color: #f3f4f6;
-  color: #111827;
+  background-color: var(--surface-subtle, #f7f8f8);
+  color: var(--text, #16201d);
 }
 
 .suggestion-item.no-result {
-  color: #9ca3af;
+  color: var(--text-2, #4b5753);
   cursor: default;
 }
 
 .suggestion-icon {
   margin-right: 6px;
+}
+
+.labhub-note-editor { border-radius: 12px; min-width: 0; }
+.labhub-note-editor.is-readonly { border: 0; background: var(--surface, #fff); }
+.note-editor-content-wrapper { min-width: 0; }
+.ProseMirror { overflow-wrap: anywhere; }
+.ProseMirror:focus-visible { outline: none; box-shadow: var(--focus-ring, 0 0 0 3px rgb(15 110 99 / .25)); border-radius: 8px; }
+.toolbar-btn:focus-visible, .toolbar-select:focus-visible, .suggestion-item:focus-visible { outline: 2px solid var(--accent, #0f6e63); outline-offset: 2px; }
+.note-editor-toolbar .toolbar-btn { gap: 4px; }
+.note-editor-toolbar .toolbar-btn svg { width: 16px; height: 16px; stroke-width: 1.75; flex-shrink: 0; }
+.ProseMirror .tableWrapper { overflow-x: auto; }
+@media (max-width: 760px) {
+  .note-editor-toolbar { padding: 8px; }
+  .note-editor-content-wrapper { padding: 12px; }
+  .ProseMirror th, .ProseMirror td { padding: 8px; }
+}
+@media (prefers-reduced-motion: reduce) { .toolbar-btn { transition: none; } }
+@media print {
+  .labhub-note-editor, .labhub-note-editor.is-readonly { background: white !important; border: 0 !important; }
+  .note-editor-toolbar { display: none !important; }
+  .note-editor-content-wrapper { padding: 0 !important; }
+  .ProseMirror { color: black !important; min-height: 0; overflow: visible !important; }
+  .ProseMirror th { background: #f2f4f3 !important; }
 }

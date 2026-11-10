@@ -22,6 +22,9 @@ import {
 } from '../lib/noteFormat';
 import AiStatusContext from '../contexts/AiStatusContext';
 import { formatQuantity, formatTimestampStatus } from '../lib/display';
+import { FileText, Plus, X, Trash2, RotateCcw, Download, History } from 'lucide-react';
+import { PageHeader, Card, StatusPill, noteStatusTone, Stepper, Callout, DropZone } from '../components/ui';
+import '../styles/records.css';
 const NoteEditor = lazy(() => import('@labhub/note-editor').then(({ NoteEditor: Editor }) => ({ default: Editor })));
 const AiEditorTools = lazy(() => import('../components/ai/AiEditorTools.jsx'));
 const AiNoteChecker = lazy(() => import('../components/ai/AiNoteChecker.jsx'));
@@ -659,15 +662,29 @@ export default function ELN() {
     const id = link.getAttribute('data-note-id');
     if (id) open({ id });
   };
+  const uploadAttachment = (files) => {
+    const file = files[0];
+    if (!file) return;
+    if (file.size > 20 * 1024 * 1024) {
+      setError('첨부파일은 20 MB 이하로 선택해주세요.');
+      return;
+    }
+    run(async () => {
+      const body = new FormData();
+      body.append('noteId', selected.id);
+      body.append('version', selected.version);
+      body.append('file', file);
+      await api.post('/files/upload', body);
+      const { data } = await api.get(`/eln/${selected.id}`);
+      setSelected(data);
+      await reload();
+    });
+  };
+  const selectedExperimentName = selected?.experimentName || [...experiments, ...formExperiments]
+    .find((item) => String(item.id || item._id) === String(selected?.experimentId))?.name;
   return (
-    <div className="dashboard-content">
-      <div className="page-heading">
-        <div>
-          <p className="eyebrow">RESEARCH WORKSPACE</p>
-          <h1 className="page-title">연구노트</h1>
-          <p className="muted">실험의 과정부터 결과까지, 한곳에서 기록하세요.</p>
-        </div>
-        <div className="button-row">
+    <div className="dashboard-content records-page">
+      <PageHeader breadcrumbs={[{ label: '연구 공간', to: '/' }, { label: '연구노트' }]} title="연구노트" description="실험의 과정부터 결과까지, 한곳에서 기록하세요." actions={<div className="button-row">
           <button
             className="btn-secondary"
             disabled={busy}
@@ -677,20 +694,19 @@ export default function ELN() {
               setPage(1);
             }}
           >
-            {trash ? '노트로 돌아가기' : '휴지통'}
+            {trash ? <RotateCcw size={18} aria-hidden="true" /> : <Trash2 size={18} aria-hidden="true" />}{trash ? '노트로 돌아가기' : '휴지통'}
           </button>
           {user.role !== 'viewer' && !trash && (
             <button className="btn-primary" onClick={() => start()}>
-              ＋ 새 노트 작성
+              <Plus size={18} aria-hidden="true" /> 새 노트 작성
             </button>
           )}
-        </div>
-      </div>
+        </div>} />
       {error && (
         <div role="alert" className="error-banner">
           {error}
           <button aria-label="오류 닫기" onClick={() => setError('')}>
-            ×
+            <X size={18} aria-hidden="true" />
           </button>
         </div>
       )}
@@ -771,11 +787,6 @@ export default function ELN() {
         </select>
         {project !== 'all' && !trash && canManageExperiments && <button className="btn-outline" onClick={() => setExperimentManager(true)}>실험 관리</button>}
       </div>
-      <p className="hierarchy-path" aria-label="현재 위치">
-        프로젝트{project !== 'all' ? `: ${projects.find((item) => item._id === project)?.name || ''}` : ''}
-        {experiment !== 'all' ? `  ›  실험: ${experiments.find((item) => (item.id || item._id) === experiment)?.name || ''}` : ''}
-        {'  ›  연구노트'}
-      </p>
       <section className="card">
         <div className="card-header">
           <h2>
@@ -801,11 +812,11 @@ export default function ELN() {
             <p>템플릿으로 시작하고 자료를 첨부할 수 있습니다.</p>
           </div>
         ) : (
-          <div className="note-list">
+          <div className="records-table-scroll"><table className="ui-table records-table records-note-table"><thead><tr><th scope="col">연구 기록</th><th scope="col">상태</th>{trash && <th scope="col">작업</th>}</tr></thead><tbody>
             {notes.map((n) => (
-              <article key={n.id} className="note-row">
-                <button className="note-open" onClick={() => !trash && open(n)} disabled={trash}>
-                  <span className="note-glyph">▤</span>
+              <tr key={n.id}>
+                <td><button className="note-open ui-cell-title records-title" onClick={() => !trash && open(n)} disabled={trash}>
+                  <span className="records-icon-tile"><FileText size={18} aria-hidden="true" /></span>
                   <span>
                     <strong>{n.title}</strong>
                     <small>
@@ -821,13 +832,9 @@ export default function ELN() {
                       ))}
                     </span>
                   </span>
-                </button>
-                <span
-                  className={`status-pill status-${n.status === '승인됨' ? 'approved' : n.status === '반려' ? 'rejected' : 'draft'}`}
-                >
-                  {n.status}
-                </span>
-                {trash && canWrite(n) && (
+                </button></td>
+                <td><StatusPill tone={noteStatusTone(n.status)}>{n.status}</StatusPill></td>
+                {trash && <td>{canWrite(n) && (
                   <button
                     className="btn-outline"
                     disabled={busy}
@@ -835,10 +842,10 @@ export default function ELN() {
                   >
                     복원
                   </button>
-                )}
-              </article>
+                )}</td>}
+              </tr>
             ))}
-          </div>
+          </tbody></table></div>
         )}
         {total > 15 && <Pagination page={page} limit={15} total={total} onPage={setPage} />}
       </section>
@@ -993,7 +1000,7 @@ export default function ELN() {
                 <div className="tag-list">
                   {(form.entitiesUsed || []).map((item) => {
                     const id = item.entityId || item.id;
-                    return <span key={id} className="tag">{item.code ? `${item.code} · ` : ''}{item.name || id}<button type="button" aria-label={`${item.name || item.code || id} 제거`} onClick={() => patch({ entitiesUsed: (form.entitiesUsed || []).filter((entry) => String(entry.entityId || entry.id) !== String(id)) })}>×</button></span>;
+                    return <span key={id} className="tag">{item.code ? `${item.code} · ` : ''}{item.name || id}<button type="button" aria-label={`${item.name || item.code || id} 제거`} onClick={() => patch({ entitiesUsed: (form.entitiesUsed || []).filter((entry) => String(entry.entityId || entry.id) !== String(id)) })}><X size={14} aria-hidden="true" /></button></span>;
                   })}
                 </div>
               </section>
@@ -1035,7 +1042,7 @@ export default function ELN() {
                 <div className="tag-list">
                   {form.reagentsUsed.map((r) => (
                     <div key={r.reagentId} className="reagent-use-item">
-                      <span className="tag">{r.name} {formatQuantity(r.amount)} {r.unit}{r.lotId ? ` · LOT ${reagentLots.find((lot) => String(lot.id || lot._id) === String(r.lotId))?.lotNumber || r.lotId}` : ' · FIFO 배정'}<button type="button" aria-label={`${r.name} 제거`} onClick={() => patch({ reagentsUsed: form.reagentsUsed.filter((x) => x.reagentId !== r.reagentId) })}>×</button></span>
+                      <span className="tag">{r.name} {formatQuantity(r.amount)} {r.unit}{r.lotId ? ` · LOT ${reagentLots.find((lot) => String(lot.id || lot._id) === String(r.lotId))?.lotNumber || r.lotId}` : ' · FIFO 배정'}<button type="button" aria-label={`${r.name} 제거`} onClick={() => patch({ reagentsUsed: form.reagentsUsed.filter((x) => x.reagentId !== r.reagentId) })}><X size={14} aria-hidden="true" /></button></span>
                       {r.allocations?.length > 0 && <small className="allocation-list">배정: {r.allocations.map((allocation) => `${allocation.lotNumber} (${formatQuantity(allocation.amount)} ${r.unit})`).join(', ')}</small>}
                     </div>
                   ))}
@@ -1077,18 +1084,24 @@ export default function ELN() {
                 {error}
               </p>
             )}
-            <h1>{selected.title}</h1>
-            <p className="muted">
-              {selected.author} · {selected.date} · {selected.status}
-              {selected.amendmentNo ? ` · 개정 ${selected.amendmentNo}` : ''}
-            </p>
+            <PageHeader breadcrumbs={[
+              { label: projects.find((item) => item._id === selected.projectId)?.name || '프로젝트', to: '/projects' },
+              ...(selectedExperimentName ? [{ label: selectedExperimentName }] : []),
+            ]} title={selected.title} description={`${selected.author} · ${selected.date}${selected.amendmentNo ? ` · 개정 ${selected.amendmentNo}` : ''}`} actions={<StatusPill tone={noteStatusTone(selected.status)}>{selected.status}</StatusPill>} />
+            <div className="records-lifecycle no-print"><Stepper steps={[
+              { label: '작성', state: selected.status === '진행중' || selected.status === '반려' ? 'current' : 'done' },
+              { label: '검토 요청', state: selected.status === '승인대기' ? 'current' : selected.status === '승인됨' ? 'done' : 'todo' },
+              { label: '승인·서명', state: selected.status === '승인됨' ? 'done' : 'todo' },
+              { label: '봉인', state: seal ? 'done' : 'todo' },
+            ]} /></div>
+            {selected.status === '반려' && <Callout tone="danger" title="반려 사유">{[...(selected.signatures || [])].reverse().find((signature) => signature.decision === 'reject')?.comment || '검토 기록을 확인해주세요.'}</Callout>}
+            <div className="records-detail-grid"><div className="records-detail-main">
             {selected.editors?.some((editor) => editor.id !== user.id) && (
               <p className="presence-notice">{selected.editors.filter((editor) => editor.id !== user.id).map((editor) => editor.name).join(', ')}님이 이 노트를 편집 중입니다.</p>
             )}
             {selected.conversionWarnings?.length > 0 && <div className="warning-banner"><strong>레거시 문서 변환 안내</strong>{selected.conversionWarnings.map((warning, index) => <p key={index}>{warning}</p>)}</div>}
             {selected.amendsNoteId && (
-              <section className="amendment-reference">
-                <h3>정정 개정판</h3>
+              <Callout tone="warning" title="정정 개정판" className="amendment-reference">
                 <p>원본 노트 내용은 보존됩니다. 원본의 시약과 첨부는 읽기 전용 참조입니다.</p>
                 {selected.amendmentReason && <p>정정 사유: {selected.amendmentReason}</p>}
                 {relatedNote && (
@@ -1115,17 +1128,17 @@ export default function ELN() {
                     )}
                   </>
                 )}
-              </section>
+              </Callout>
             )}
             {selected.supersededBy && (
-              <section className="amendment-reference">
+              <Callout tone="warning" title="개정판" className="amendment-reference">
                 <p>이 노트에는 개정판이 연결되어 있습니다. 원본과 봉인은 보존됩니다.</p>
                 {relatedNote && (
                   <button className="btn-outline" onClick={() => open(relatedNote)}>
                     개정판 열기: {relatedNote.title}
                   </button>
                 )}
-              </section>
+              </Callout>
             )}
             <div className="note-content-rendered" ref={noteContentRef} onClick={openNoteReference}>
               <Suspense fallback={<p role="status">문서를 불러오는 중…</p>}>
@@ -1168,7 +1181,7 @@ export default function ELN() {
                         })
                       }
                     >
-                      {f.originalName} ({Math.ceil(f.size / 1024)} KB) ↓
+                      {f.originalName} ({Math.ceil(f.size / 1024)} KB) <Download size={16} aria-hidden="true" />
                     </button>
                     {canWrite(selected) && ['진행중', '반려'].includes(selected.status) && (
                       <button
@@ -1195,32 +1208,17 @@ export default function ELN() {
                 <p className="muted">첨부된 자료가 없습니다.</p>
               )}
               {canWrite(selected) && ['진행중', '반려'].includes(selected.status) && (
-                <label className="upload-label no-print">
+                <DropZone className="records-attachment-drop no-print" disabled={busy} onFiles={uploadAttachment}><label className="upload-label">
                   파일 추가 (최대 20 MB)
                   <input
                     type="file"
                     disabled={busy}
                     onChange={(e) => {
-                      const file = e.target.files[0];
+                      uploadAttachment(e.target.files);
                       e.target.value = '';
-                      if (!file) return;
-                      if (file.size > 20 * 1024 * 1024) {
-                        setError('첨부파일은 20 MB 이하로 선택해주세요.');
-                        return;
-                      }
-                      run(async () => {
-                        const body = new FormData();
-                        body.append('noteId', selected.id);
-                        body.append('version', selected.version);
-                        body.append('file', file);
-                        await api.post('/files/upload', body);
-                        const { data } = await api.get(`/eln/${selected.id}`);
-                        setSelected(data);
-                        await reload();
-                      });
                     }}
                   />
-                </label>
+                </label></DropZone>
               )}
             </section>
             {!!selected.signatures?.length && (
@@ -1239,8 +1237,48 @@ export default function ELN() {
                 ))}
               </section>
             )}
-            <CommentPanel note={selected} doc={noteDoc(selected)} canManage={canManageComments(selected)} />
-            <section className="seal-panel">
+            {selected.status === '승인대기' && canReview(selected) && selected.authorId !== user.id && (
+              <section className="review-panel no-print">
+                <h3>노트 점검</h3>
+                <p className="muted">프로젝트 관리자 또는 시스템 관리자 자격으로 점검자 서명을 진행합니다.</p>
+                <div className="button-row">
+                  <button
+                    className="btn-primary"
+                    disabled={busy}
+                    onClick={() => setSignConfig({
+                      path: 'approve',
+                      title: '점검자 서명 및 승인',
+                      meaning: '현재 버전과 작성자 서명을 확인한 뒤 점검자 서명으로 승인합니다.',
+                      submitLabel: '서명하고 승인',
+                      commentLabel: '검토 의견 (선택)',
+                      successMessage: '노트를 승인하고 봉인했습니다.',
+                    })}
+                  >
+                    승인 및 잠금
+                  </button>
+                  <button
+                    className="btn-secondary"
+                    disabled={busy}
+                    onClick={() => setSignConfig({
+                      path: 'reject',
+                      title: '점검자 서명 및 반려',
+                      meaning: '반려 사유와 현재 버전을 확인한 뒤 점검자 서명으로 반려합니다.',
+                      submitLabel: '서명하고 반려',
+                      requireComment: true,
+                      danger: true,
+                      successMessage: '노트를 반려했습니다.',
+                    })}
+                  >
+                    반려
+                  </button>
+                </div>
+              </section>
+            )}
+            {selected.status === '승인대기' && selected.authorId === user.id && (
+              <p className="muted">다른 관리자의 검토를 기다리고 있습니다.</p>
+            )}
+            </div><aside className="records-detail-aside">
+            <Card className="seal-panel">
               <h3>봉인·증빙</h3>
               {sealLoading && <p role="status">봉인 정보를 불러오는 중…</p>}
               {!sealLoading && !seal && (
@@ -1324,56 +1362,15 @@ export default function ELN() {
                   )}
                 </>
               )}
-            </section>
-            {selected.status === '승인대기' && canReview(selected) && selected.authorId !== user.id && (
-              <section className="review-panel no-print">
-                <h3>노트 점검</h3>
-                <p className="muted">프로젝트 관리자 또는 시스템 관리자 자격으로 점검자 서명을 진행합니다.</p>
-                <div className="button-row">
-                  <button
-                    className="btn-primary"
-                    disabled={busy}
-                    onClick={() => setSignConfig({
-                      path: 'approve',
-                      title: '점검자 서명 및 승인',
-                      meaning: '현재 버전과 작성자 서명을 확인한 뒤 점검자 서명으로 승인합니다.',
-                      submitLabel: '서명하고 승인',
-                      commentLabel: '검토 의견 (선택)',
-                      successMessage: '노트를 승인하고 봉인했습니다.',
-                    })}
-                  >
-                    승인 및 잠금
-                  </button>
-                  <button
-                    className="btn-secondary"
-                    disabled={busy}
-                    onClick={() => setSignConfig({
-                      path: 'reject',
-                      title: '점검자 서명 및 반려',
-                      meaning: '반려 사유와 현재 버전을 확인한 뒤 점검자 서명으로 반려합니다.',
-                      submitLabel: '서명하고 반려',
-                      requireComment: true,
-                      danger: true,
-                      successMessage: '노트를 반려했습니다.',
-                    })}
-                  >
-                    반려
-                  </button>
-                </div>
-              </section>
-            )}
-            {selected.status === '승인대기' && selected.authorId === user.id && (
-              <p className="muted">다른 관리자의 검토를 기다리고 있습니다.</p>
-            )}
+            </Card>
+            <CommentPanel note={selected} doc={noteDoc(selected)} canManage={canManageComments(selected)} />
+              <Card title="변경 이력" className="records-history-card no-print">
+                <p className="muted">현재 버전 <span className="records-mono">v{selected.version}</span></p>
+                <button className="btn-outline" disabled={busy} onClick={() => setHistoryOpen(true)}><History size={18} aria-hidden="true" />변경 이력</button>
+              </Card>
+            </aside></div>
           </div>
           <div className="modal-footer no-print wrap">
-            <button
-              className="btn-outline"
-              disabled={busy}
-              onClick={() => setHistoryOpen(true)}
-            >
-              변경 이력
-            </button>
             <button
               className="btn-outline"
               disabled={busy}
@@ -1524,7 +1521,7 @@ export default function ELN() {
                 <div className="button-row"><button className="btn-primary" disabled={busy}>저장</button><button type="button" className="btn-outline" onClick={() => setExperimentEditor(null)}>취소</button></div>
               </form>
             )}
-            <button className="btn-outline" onClick={() => setExperimentEditor({ name: '', description: '', status: 'active' })}>＋ 새 실험</button>
+            <button className="btn-outline" onClick={() => setExperimentEditor({ name: '', description: '', status: 'active' })}><Plus size={18} aria-hidden="true" /> 새 실험</button>
             <div className="experiment-list">{experiments.map((item) => <article className="note-row" key={item.id || item._id}><div><strong>{item.name}</strong><small>{item.status} · {item.description}</small></div><div className="button-row"><button className="btn-outline" onClick={() => setExperimentEditor({ ...item, id: item.id || item._id })}>편집</button><button className="btn-outline" disabled={busy} onClick={() => deleteExperiment(item)}>보관</button></div></article>)}</div>
           </div>
         </Modal>

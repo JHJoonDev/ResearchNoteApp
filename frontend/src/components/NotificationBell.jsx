@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Bell, CheckCheck } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { api, errorMessage } from '../lib/api';
 
@@ -6,6 +7,17 @@ export default function NotificationBell() {
   const [data, setData] = useState({ items: [], unread: 0 });
   const [open, setOpen] = useState(false);
   const [error, setError] = useState('');
+  const menu = useRef(null);
+  useEffect(() => {
+    const outside = (event) => { if (!menu.current?.contains(event.target)) setOpen(false); };
+    const escape = (event) => { if (event.key === 'Escape') setOpen(false); };
+    document.addEventListener('pointerdown', outside);
+    document.addEventListener('keydown', escape);
+    return () => {
+      document.removeEventListener('pointerdown', outside);
+      document.removeEventListener('keydown', escape);
+    };
+  }, []);
   const refresh = useCallback(async () => {
     if (document.visibilityState !== 'visible') return;
     try {
@@ -52,21 +64,21 @@ export default function NotificationBell() {
   };
 
   return (
-    <div className="notification-menu">
+    <div className="notification-menu" ref={menu}>
       <button
         className="notification-trigger"
         aria-label={`알림 ${data.unread}건`}
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
       >
-        알림{data.unread > 0 && <span className="notification-count">{data.unread}</span>}
+        <Bell aria-hidden="true" />{data.unread > 0 && <span className="notification-count" aria-hidden="true" />}
       </button>
       {open && (
         <section className="notification-popover" aria-label="알림 목록">
           <div className="card-header">
             <strong>알림</strong>
-            <button className="btn-outline" disabled={!data.unread} onClick={markAllRead}>
-              모두 읽음
+            <button className="btn-ghost btn-small" disabled={!data.unread} onClick={markAllRead}>
+              <CheckCheck aria-hidden="true" /> 모두 읽음
             </button>
           </div>
           {error && <p role="alert" className="error-banner">{error}</p>}

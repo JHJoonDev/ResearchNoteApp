@@ -1,1 +1,9 @@
-/* index.css cleared for React prototype */
+html { font-size: 14px; }
+body { min-width: 320px; line-height: 1.5; }
+svg.lucide { width: 18px; height: 18px; stroke-width: 1.75; flex-shrink: 0; vertical-align: middle; }
+button, input, select, textarea { font: inherit; }
+code, pre, kbd { font-family: var(--font-mono); }
+img { max-width: 100%; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}

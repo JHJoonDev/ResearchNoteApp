@@ -1,3 +1,6 @@
+import { PageHeader, Card, StatusPill } from '../components/ui';
+import { Plus } from 'lucide-react';
+import '../styles/operations.css';
 import { useEffect, useState } from 'react';
 import useAppStore from '../store/useAppStore';
 import useAuthStore from '../store/useAuthStore';
@@ -25,34 +28,24 @@ export default function Members() {
     }
   };
   return (
-    <div className="dashboard-content">
-      <div className="page-heading">
-        <div>
-          <p className="eyebrow">YOUR LAB</p>
-          <h1 className="page-title">연구실 멤버</h1>
-          <p className="muted">관리자가 계정을 등록하고 프로젝트별 접근 권한을 부여합니다.</p>
-        </div>
-        {user.role === 'admin' && (
+    <div className="dashboard-content operations-page">
+      <PageHeader breadcrumbs={[{ label: '연구 공간', to: '/' }, { label: '연구실' }, { label: '연구실 멤버' }]} title="연구실 멤버" description="관리자가 계정을 등록하고 프로젝트별 접근 권한을 부여합니다." actions={<>{user.role === 'admin' && (
           <button
             className="btn-primary"
             onClick={() => setForm({ name: '', email: '', role: 'researcher', password: '', invite: false })}
           >
-            ＋ 멤버 등록
+            <Plus aria-hidden="true" /> 멤버 등록
           </button>
-        )}
-      </div>
+        )}</>} />
       {notice && <p role="status" className="notice-banner">{notice}</p>}
-      <div className="project-grid">
-        {membersData.map((m) => (
-          <section className="card" key={m.id}>
-            <span className="avatar">{m.name.slice(0, 1)}</span>
-            <h2>{m.name}</h2>
-            <p className="muted">{m.email}</p>
-            {m.isActive === false && <span className="status-pill status-rejected">비활성</span>}
-            <p>
-              {m.role === 'admin' ? '관리자' : m.role === 'researcher' ? '연구원' : '읽기 전용'}
-            </p>
-            {user.role === 'admin' && (
+      <Card className="card operations-members" padded={false}>
+        <div className="table-scroll"><table className="ui-table data-table">
+          <thead><tr><th>멤버</th><th>계정 권한</th><th>상태</th><th>작업</th></tr></thead>
+          <tbody>{membersData.map((m) => <tr key={m.id}>
+            <td><div className="ui-cell-title"><span className="operations-member-avatar" aria-hidden="true">{m.name.slice(0, 1)}</span><div><h3 className="operations-member-name">{m.name}</h3><small>{m.email}</small></div></div></td>
+            <td><StatusPill tone={m.role === 'admin' ? 'accent' : m.role === 'researcher' ? 'info' : 'neutral'}>{m.role === 'admin' ? '관리자' : m.role === 'researcher' ? '연구원' : '읽기 전용'}</StatusPill></td>
+            <td>{m.isActive === false ? <StatusPill tone="neutral">비활성</StatusPill> : <StatusPill tone="success">활성</StatusPill>}</td>
+            <td>{user.role === 'admin' && (
               <div className="button-row">
                 <button
                   className="btn-outline"
@@ -90,10 +83,10 @@ export default function Members() {
                   </button>
                 )}
               </div>
-            )}
-          </section>
-        ))}
-      </div>
+            )}</td>
+          </tr>)}</tbody>
+        </table></div>
+      </Card>
       {form && (
         <Modal
           title={form.id ? '멤버 수정' : '멤버 등록'}

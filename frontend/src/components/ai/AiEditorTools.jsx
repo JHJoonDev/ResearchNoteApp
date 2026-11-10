@@ -4,6 +4,7 @@ import Modal from '../Modal';
 import { api } from '../../lib/api';
 import { aiErrorMessage } from './aiMessages';
 import './ai.css';
+import { Sparkles, Table2 } from 'lucide-react';
 
 const supportedMimeTypes = new Set(['image/png', 'image/jpeg', 'application/pdf']);
 const textNode = (text) => (text ? [{ type: 'text', text: String(text) }] : undefined);
@@ -114,8 +115,8 @@ export default function AiEditorTools({ features, attachments = [], onInsert }) 
     <section className="ai-tools no-print" aria-label="AI 문서 도구">
       <p className="muted">AI 결과는 제안입니다. 내용을 검토한 뒤 직접 삽입하고 저장하세요.</p>
       <div className="button-row">
-        {features.includes('draftNote') && <button type="button" className="btn-outline" onClick={() => { setDialog('draft'); setDraft(null); setError(''); }}>AI 초안</button>}
-        {features.includes('extractTables') && <button type="button" className="btn-outline" onClick={() => { setDialog('tables'); setTableResult(null); setError(''); }}>표 추출</button>}
+        {features.includes('draftNote') && <button type="button" className="btn-outline" onClick={() => { setDialog('draft'); setDraft(null); setError(''); }}><Sparkles aria-hidden="true" />AI 초안</button>}
+        {features.includes('extractTables') && <button type="button" className="btn-outline" onClick={() => { setDialog('tables'); setTableResult(null); setError(''); }}><Table2 aria-hidden="true" />표 추출</button>}
       </div>
 
       {dialog === 'draft' && <Modal title="AI 초안 제안" onClose={close} busy={busy} wide>

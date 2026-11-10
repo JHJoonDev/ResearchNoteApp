@@ -3,6 +3,7 @@
  */
 
 import React, { useRef } from 'react';
+import { Bold, Italic, Underline, Strikethrough, Code, Subscript, Superscript, Link, AlignLeft, AlignCenter, AlignRight, AlignJustify, List, ListOrdered, ListTodo, Quote, CodeXml, Minus, Table2, Rows3, Columns3, Merge, FunctionSquare, Sigma, Image, Undo2, Redo2 } from 'lucide-react';
 import { handleUpload } from '../extensions/image.js';
 
 export function Toolbar({ editor, onUploadImage, readOnly }) {
@@ -102,8 +103,9 @@ export function Toolbar({ editor, onUploadImage, readOnly }) {
         className={`toolbar-btn ${editor.isActive('bold') ? 'is-active' : ''}`}
         onClick={() => editor.chain().focus().toggleBold().run()}
         title="굵게 (Ctrl+B)"
+        aria-label="굵게"
       >
-        <strong>B</strong>
+        <Bold size={16} strokeWidth={1.75} aria-hidden="true" />
       </button>
 
       <button
@@ -111,8 +113,9 @@ export function Toolbar({ editor, onUploadImage, readOnly }) {
         className={`toolbar-btn ${editor.isActive('italic') ? 'is-active' : ''}`}
         onClick={() => editor.chain().focus().toggleItalic().run()}
         title="기울임 (Ctrl+I)"
+        aria-label="기울임"
       >
-        <em>I</em>
+        <Italic size={16} strokeWidth={1.75} aria-hidden="true" />
       </button>
 
       <button
@@ -120,8 +123,9 @@ export function Toolbar({ editor, onUploadImage, readOnly }) {
         className={`toolbar-btn ${editor.isActive('underline') ? 'is-active' : ''}`}
         onClick={() => editor.chain().focus().toggleUnderline().run()}
         title="밑줄 (Ctrl+U)"
+        aria-label="밑줄"
       >
-        <u>U</u>
+        <Underline size={16} strokeWidth={1.75} aria-hidden="true" />
       </button>
 
       <button
@@ -129,8 +133,9 @@ export function Toolbar({ editor, onUploadImage, readOnly }) {
         className={`toolbar-btn ${editor.isActive('strike') ? 'is-active' : ''}`}
         onClick={() => editor.chain().focus().toggleStrike().run()}
         title="취소선"
+        aria-label="취소선"
       >
-        <s>S</s>
+        <Strikethrough size={16} strokeWidth={1.75} aria-hidden="true" />
       </button>
 
       <button
@@ -138,8 +143,9 @@ export function Toolbar({ editor, onUploadImage, readOnly }) {
         className={`toolbar-btn ${editor.isActive('code') ? 'is-active' : ''}`}
         onClick={() => editor.chain().focus().toggleCode().run()}
         title="인라인 코드"
+        aria-label="인라인 코드"
       >
-        <code>{'<>'}</code>
+        <Code size={16} strokeWidth={1.75} aria-hidden="true" />
       </button>
 
       <button
@@ -147,8 +153,9 @@ export function Toolbar({ editor, onUploadImage, readOnly }) {
         className={`toolbar-btn ${editor.isActive('subscript') ? 'is-active' : ''}`}
         onClick={() => editor.chain().focus().toggleSubscript().run()}
         title="아래첨자"
+        aria-label="아래첨자"
       >
-        X<sub>2</sub>
+        <Subscript size={16} strokeWidth={1.75} aria-hidden="true" />
       </button>
 
       <button
@@ -156,8 +163,9 @@ export function Toolbar({ editor, onUploadImage, readOnly }) {
         className={`toolbar-btn ${editor.isActive('superscript') ? 'is-active' : ''}`}
         onClick={() => editor.chain().focus().toggleSuperscript().run()}
         title="위첨자"
+        aria-label="위첨자"
       >
-        X<sup>2</sup>
+        <Superscript size={16} strokeWidth={1.75} aria-hidden="true" />
       </button>
 
       <button
@@ -165,8 +173,9 @@ export function Toolbar({ editor, onUploadImage, readOnly }) {
         className={`toolbar-btn ${editor.isActive('link') ? 'is-active' : ''}`}
         onClick={handleLink}
         title="링크"
+        aria-label="링크"
       >
-        🔗
+        <Link size={16} strokeWidth={1.75} aria-hidden="true" />
       </button>
 
       <span className="toolbar-divider" />
@@ -181,8 +190,9 @@ export function Toolbar({ editor, onUploadImage, readOnly }) {
           editor.chain().focus().updateAttributes('paragraph', { align: next }).updateAttributes('heading', { align: next }).run();
         }}
         title="왼쪽 정렬"
+        aria-label="왼쪽 정렬"
       >
-        ≡L
+        <AlignLeft size={16} strokeWidth={1.75} aria-hidden="true" />
       </button>
 
       <button
@@ -194,8 +204,9 @@ export function Toolbar({ editor, onUploadImage, readOnly }) {
           editor.chain().focus().updateAttributes('paragraph', { align: next }).updateAttributes('heading', { align: next }).run();
         }}
         title="가운데 정렬"
+        aria-label="가운데 정렬"
       >
-        ≡C
+        <AlignCenter size={16} strokeWidth={1.75} aria-hidden="true" />
       </button>
 
       <button
@@ -207,8 +218,9 @@ export function Toolbar({ editor, onUploadImage, readOnly }) {
           editor.chain().focus().updateAttributes('paragraph', { align: next }).updateAttributes('heading', { align: next }).run();
         }}
         title="오른쪽 정렬"
+        aria-label="오른쪽 정렬"
       >
-        ≡R
+        <AlignRight size={16} strokeWidth={1.75} aria-hidden="true" />
       </button>
 
       <button
@@ -220,8 +232,9 @@ export function Toolbar({ editor, onUploadImage, readOnly }) {
           editor.chain().focus().updateAttributes('paragraph', { align: next }).updateAttributes('heading', { align: next }).run();
         }}
         title="양쪽 정렬"
+        aria-label="양쪽 정렬"
       >
-        ≡J
+        <AlignJustify size={16} strokeWidth={1.75} aria-hidden="true" />
       </button>
 
       <span className="toolbar-divider" />
@@ -232,8 +245,9 @@ export function Toolbar({ editor, onUploadImage, readOnly }) {
         className={`toolbar-btn ${editor.isActive('bulletList') ? 'is-active' : ''}`}
         onClick={() => editor.chain().focus().toggleBulletList().run()}
         title="글머리 기호 목록"
+        aria-label="글머리 기호 목록"
       >
-        • 목록
+        <List size={16} strokeWidth={1.75} aria-hidden="true" />
       </button>
 
       <button
@@ -241,8 +255,9 @@ export function Toolbar({ editor, onUploadImage, readOnly }) {
         className={`toolbar-btn ${editor.isActive('orderedList') ? 'is-active' : ''}`}
         onClick={() => editor.chain().focus().toggleOrderedList().run()}
         title="번호 매기기 목록"
+        aria-label="번호 매기기 목록"
       >
-        1. 목록
+        <ListOrdered size={16} strokeWidth={1.75} aria-hidden="true" />
       </button>
 
       <button
@@ -250,8 +265,9 @@ export function Toolbar({ editor, onUploadImage, readOnly }) {
         className={`toolbar-btn ${editor.isActive('taskList') ? 'is-active' : ''}`}
         onClick={() => editor.chain().focus().toggleTaskList().run()}
         title="할 일 목록"
+        aria-label="할 일 목록"
       >
-        ☑ 할일
+        <ListTodo size={16} strokeWidth={1.75} aria-hidden="true" />
       </button>
 
       <button
@@ -259,8 +275,9 @@ export function Toolbar({ editor, onUploadImage, readOnly }) {
         className={`toolbar-btn ${editor.isActive('blockquote') ? 'is-active' : ''}`}
         onClick={() => editor.chain().focus().toggleBlockquote().run()}
         title="인용구"
+        aria-label="인용구"
       >
-        ❝ 인용
+        <Quote size={16} strokeWidth={1.75} aria-hidden="true" />
       </button>
 
       <button
@@ -268,8 +285,9 @@ export function Toolbar({ editor, onUploadImage, readOnly }) {
         className={`toolbar-btn ${editor.isActive('codeBlock') ? 'is-active' : ''}`}
         onClick={() => editor.chain().focus().toggleCodeBlock().run()}
         title="코드 블록"
+        aria-label="코드 블록"
       >
-        코드
+        <CodeXml size={16} strokeWidth={1.75} aria-hidden="true" />
       </button>
 
       <button
@@ -277,8 +295,9 @@ export function Toolbar({ editor, onUploadImage, readOnly }) {
         className="toolbar-btn"
         onClick={() => editor.chain().focus().setHorizontalRule().run()}
         title="구분선"
+        aria-label="구분선"
       >
-        ―
+        <Minus size={16} strokeWidth={1.75} aria-hidden="true" />
       </button>
 
       <span className="toolbar-divider" />
@@ -289,8 +308,9 @@ export function Toolbar({ editor, onUploadImage, readOnly }) {
         className={`toolbar-btn ${editor.isActive('table') ? 'is-active' : ''}`}
         onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
         title="표 삽입"
+        aria-label="표 삽입"
       >
-        ⊞ 표
+        <Table2 size={16} strokeWidth={1.75} aria-hidden="true" />표
       </button>
 
       {editor.isActive('table') && (
@@ -300,49 +320,55 @@ export function Toolbar({ editor, onUploadImage, readOnly }) {
             className="toolbar-btn"
             onClick={() => editor.chain().focus().addRowAfter().run()}
             title="행 아래 추가"
-          >
-            +행
-          </button>
+        aria-label="행 아래 추가"
+      >
+        <Rows3 size={16} strokeWidth={1.75} aria-hidden="true" />행 추가
+      </button>
           <button
             type="button"
             className="toolbar-btn"
             onClick={() => editor.chain().focus().deleteRow().run()}
             title="행 삭제"
-          >
-            -행
-          </button>
+        aria-label="행 삭제"
+      >
+        <Rows3 size={16} strokeWidth={1.75} aria-hidden="true" />행 삭제
+      </button>
           <button
             type="button"
             className="toolbar-btn"
             onClick={() => editor.chain().focus().addColumnAfter().run()}
             title="열 오른쪽 추가"
-          >
-            +열
-          </button>
+        aria-label="열 오른쪽 추가"
+      >
+        <Columns3 size={16} strokeWidth={1.75} aria-hidden="true" />열 추가
+      </button>
           <button
             type="button"
             className="toolbar-btn"
             onClick={() => editor.chain().focus().deleteColumn().run()}
             title="열 삭제"
-          >
-            -열
-          </button>
+        aria-label="열 삭제"
+      >
+        <Columns3 size={16} strokeWidth={1.75} aria-hidden="true" />열 삭제
+      </button>
           <button
             type="button"
             className="toolbar-btn"
             onClick={() => editor.chain().focus().mergeCells().run()}
             title="셀 병합"
-          >
-            병합
-          </button>
+        aria-label="셀 병합"
+      >
+        <Merge size={16} strokeWidth={1.75} aria-hidden="true" />병합
+      </button>
           <button
             type="button"
             className="toolbar-btn"
             onClick={() => editor.chain().focus().deleteTable().run()}
             title="표 삭제"
-          >
-            표삭제
-          </button>
+        aria-label="표 삭제"
+      >
+        <Table2 size={16} strokeWidth={1.75} aria-hidden="true" />표 삭제
+      </button>
         </>
       )}
 
@@ -354,8 +380,9 @@ export function Toolbar({ editor, onUploadImage, readOnly }) {
         className="toolbar-btn"
         onClick={handleAddMathInline}
         title="인라인 수식 삽입"
+        aria-label="인라인 수식 삽입"
       >
-        f(x)
+        <FunctionSquare size={16} strokeWidth={1.75} aria-hidden="true" />
       </button>
 
       <button
@@ -363,8 +390,9 @@ export function Toolbar({ editor, onUploadImage, readOnly }) {
         className="toolbar-btn"
         onClick={handleAddMathBlock}
         title="블록 수식 삽입"
+        aria-label="블록 수식 삽입"
       >
-        ∑ 수식
+        <Sigma size={16} strokeWidth={1.75} aria-hidden="true" />수식
       </button>
 
       {onUploadImage && (
@@ -374,9 +402,10 @@ export function Toolbar({ editor, onUploadImage, readOnly }) {
             className="toolbar-btn"
             onClick={handleImageClick}
             title="이미지 업로드"
-          >
-            🖼 이미지
-          </button>
+        aria-label="이미지 업로드"
+      >
+        <Image size={16} strokeWidth={1.75} aria-hidden="true" />이미지
+      </button>
           <input
             type="file"
             ref={fileInputRef}
@@ -396,8 +425,9 @@ export function Toolbar({ editor, onUploadImage, readOnly }) {
         onClick={() => editor.chain().focus().undo().run()}
         disabled={!editor.can().undo()}
         title="실행 취소 (Ctrl+Z)"
+        aria-label="실행 취소"
       >
-        ↺
+        <Undo2 size={16} strokeWidth={1.75} aria-hidden="true" />
       </button>
       <button
         type="button"
@@ -405,8 +435,9 @@ export function Toolbar({ editor, onUploadImage, readOnly }) {
         onClick={() => editor.chain().focus().redo().run()}
         disabled={!editor.can().redo()}
         title="다시 실행 (Ctrl+Y)"
+        aria-label="다시 실행"
       >
-        ↻
+        <Redo2 size={16} strokeWidth={1.75} aria-hidden="true" />
       </button>
     </div>
   );

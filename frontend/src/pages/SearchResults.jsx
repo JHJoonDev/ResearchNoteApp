@@ -3,6 +3,9 @@ import { Link, useSearchParams } from 'react-router-dom';
 import Pagination from '../components/Pagination';
 import { api, errorMessage } from '../lib/api';
 import AiStatusContext from '../contexts/AiStatusContext';
+import { Search, FileText, Sparkles } from 'lucide-react';
+import { PageHeader, Card, EmptyState, StatusPill } from '../components/ui';
+import '../styles/records.css';
 
 const AiAskDialog = lazy(() => import('../components/ai/AiAskDialog.jsx'));
 
@@ -41,25 +44,18 @@ export default function SearchResults() {
 
   const setPage = (next) => setParams({ q: query, page: String(next) });
   return (
-    <div className="dashboard-content">
-      <div className="page-heading">
-        <div>
-          <p className="eyebrow">SEARCH</p>
-          <h1 className="page-title">전체 검색</h1>
-          <p className="muted">“{query}” 검색 결과</p>
-        </div>
-        {aiStatus.enabled && aiStatus.features.includes('askNotes') && <button className="btn-outline" onClick={() => setAskOpen(true)}>AI에게 질문하기</button>}
-      </div>
+    <div className="dashboard-content records-page">
+      <PageHeader breadcrumbs={[{ label: '연구 공간', to: '/' }, { label: '전체 검색' }]} title="전체 검색" description={`“${query}” 검색 결과`} actions={aiStatus.enabled && aiStatus.features.includes('askNotes') && <button className="btn-outline" onClick={() => setAskOpen(true)}><Sparkles aria-hidden="true" />AI에게 질문하기</button>} />
       {askOpen && aiStatus.enabled && aiStatus.features.includes('askNotes') && <Suspense fallback={<p role="status">AI 질문 도구를 불러오는 중…</p>}><AiAskDialog initialQuestion={query} onClose={() => setAskOpen(false)} /></Suspense>}
       {error && completedKey === requestKey && <p role="alert" className="error-banner">{error}</p>}
-      <section className="card">
+      <Card>
         {!query.trim() ? <p className="muted">검색어를 입력해주세요.</p> : loading ? <p role="status">검색 중…</p> : !data.items?.length ? (
-          <div className="empty-state"><h2>검색 결과가 없습니다.</h2></div>
+          <EmptyState icon={<Search />} title="검색 결과가 없습니다." />
         ) : data.items.map((item) => (
           <article className="search-result" key={`${item.type}:${item.id}`}>
-            <p className="eyebrow">{item.type}</p>
+            <StatusPill tone="neutral">{item.type}</StatusPill>
             {item.type === 'note' ? (
-              <Link to={`/eln?noteId=${encodeURIComponent(item.id)}`}><h2>{item.title}</h2></Link>
+              <Link className="records-search-link" to={`/eln?noteId=${encodeURIComponent(item.id)}`}><FileText aria-hidden="true" /><h2>{item.title}</h2></Link>
             ) : <h2>{item.title}</h2>}
             <p>{item.snippet}</p>
           </article>
@@ -67,7 +63,7 @@ export default function SearchResults() {
         {data.total > data.limit && (
           <Pagination page={data.page || page} limit={data.limit} total={data.total} onPage={setPage} />
         )}
-      </section>
+      </Card>
     </div>
   );
 }

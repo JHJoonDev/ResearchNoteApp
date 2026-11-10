@@ -16,6 +16,8 @@ import { openFile } from '../lib/storage/index.js';
 
 const router = express.Router();
 router.use(auth);
+// Status is cheap and never reaches the provider; keep it outside the AI quota so a busy user still sees the AI controls.
+router.get('/status', (req, res) => res.json(aiStatus()));
 router.use(rateLimit({
   windowMs: 60_000,
   limit: aiRateLimit,
@@ -118,8 +120,6 @@ async function readAttachmentWithinLimit(file, maxBytes) {
   }
   return Buffer.concat(chunks);
 }
-
-router.get('/status', (req, res) => res.json(aiStatus()));
 
 router.post('/draft-note', isEnabled, writer, async (req, res) => {
   await execute(req, res, 'draftNote', (ai) => ai.draftNote({ memo: req.body.memo, sections: req.body.sections }));

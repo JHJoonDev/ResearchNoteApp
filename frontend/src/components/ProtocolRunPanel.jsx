@@ -1,3 +1,5 @@
+import { Card } from './ui';
+
 export default function ProtocolRunPanel({ run, editable, onChange, onSave, busy }) {
   if (!run?.snapshot) return null;
   const steps = run.snapshot.steps || [];
@@ -13,7 +15,7 @@ export default function ProtocolRunPanel({ run, editable, onChange, onSave, busy
     });
   };
   return (
-    <section className="protocol-run-panel">
+    <Card className="protocol-run-panel">
       <div className="card-header"><div><h3>프로토콜 실행</h3><p className="muted">{run.snapshot.title} · v{run.version}</p></div>{editable && <button className="btn-primary" disabled={busy} onClick={onSave}>{busy ? '저장 중…' : '실행 결과 저장'}</button>}</div>
       {steps.map((step, index) => {
         const result = results.find((entry) => entry.stepId === step.id) || { checked: [], values: {}, note: '' };
@@ -34,6 +36,6 @@ export default function ProtocolRunPanel({ run, editable, onChange, onSave, busy
           </fieldset>
         );
       })}
-    </section>
+    </Card>
   );
 }

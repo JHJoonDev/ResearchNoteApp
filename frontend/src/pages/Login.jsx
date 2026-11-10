@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, Navigate, useLocation } from 'react-router-dom';
 import useAuthStore from '../store/useAuthStore';
 import { api, errorMessage } from '../lib/api';
+import { BrandMark } from '../components/ui';
 export default function Login() {
   const location = useLocation();
   const { login, completeMfaLogin, isAuthenticated, loading, error: loginError } = useAuthStore();
@@ -64,15 +65,12 @@ export default function Login() {
   return (
     <main className="auth-page">
       <section className="auth-story">
-        <span className="brand-mark">▤ LabHub</span>
         <h1>
-          발견의 순간을
-          <br />
+          발견의 순간을{' '}
           신뢰할 수 있는 기록으로.
         </h1>
         <p>
-          실험 노트, 시약, 검토 이력을
-          <br />
+          실험 노트, 시약, 검토 이력을{' '}
           연구팀의 한 공간에서 관리하세요.
         </p>
         <div className="auth-features">
@@ -83,7 +81,8 @@ export default function Login() {
       </section>
       <section className="auth-form">
         <div className="auth-card">
-          <p className="eyebrow">YOUR RESEARCH STARTS HERE</p>
+          <BrandMark />
+          <p className="eyebrow">연구 기록의 시작</p>
           <h2>{mfaToken ? '2단계 인증' : setup ? '연구실 시작하기' : '로그인'}</h2>
           <p className="muted">
             {mfaToken

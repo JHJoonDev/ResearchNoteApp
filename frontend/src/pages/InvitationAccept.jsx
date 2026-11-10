@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api, errorMessage } from '../lib/api';
+import { BrandMark } from '../components/ui';
 
 export default function InvitationAccept() {
   const navigate = useNavigate();
@@ -47,7 +48,8 @@ export default function InvitationAccept() {
   return (
     <main className="auth-page">
       <section className="auth-form"><div className="auth-card">
-        <p className="eyebrow">LAB INVITATION</p>
+        <BrandMark />
+        <p className="eyebrow">연구실 초대</p>
         <h1>연구실 초대 수락</h1>
         {error && <p role="alert" className="error-banner">{error}</p>}
         {invite ? <>

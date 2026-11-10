@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { X } from 'lucide-react';
 export default function Modal({ title, onClose, children, wide = false, busy = false }) {
   const dialog = useRef(null);
   useEffect(() => {
@@ -25,7 +26,7 @@ export default function Modal({ title, onClose, children, wide = false, busy = f
           disabled={busy}
           onClick={onClose}
         >
-          ×
+          <X aria-hidden="true" />
         </button>
       </div>
       {children}

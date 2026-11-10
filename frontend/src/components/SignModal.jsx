@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { api, errorMessage } from '../lib/api';
 import Modal from './Modal';
+import { ShieldCheck } from 'lucide-react';
+import { Callout } from './ui';
 
 export default function SignModal({
   title,
@@ -42,9 +44,9 @@ export default function SignModal({
 
   return (
     <Modal title={title} busy={busy} onClose={onCancel}>
-      <form onSubmit={submit}>
+      <form className="sign-form" onSubmit={submit}>
         <div className="modal-body">
-          <p>{meaning}</p>
+          <Callout tone={danger ? 'warning' : 'accent'} icon={<ShieldCheck />} title={title}>{meaning}</Callout>
           {error && (
             <p className="error-banner" role="alert">
               {error}
@@ -93,7 +95,7 @@ export default function SignModal({
             취소
           </button>
           <button
-            className={danger ? 'btn-secondary' : 'btn-primary'}
+            className={danger ? 'btn-danger' : 'btn-primary'}
             disabled={
               busy ||
               mfaEnabled === null ||

@@ -322,12 +322,13 @@ await test('Phase 4 AI backend contract and regression coverage', async (t) => {
     assert.doesNotMatch(JSON.stringify(failed.data), /PROVIDER_PRIVATE_FAILURE_MARKER/);
   });
 
-  await t.test('AI rate limit is applied per authenticated user', async () => {
+  await t.test('AI rate limit is applied per authenticated user and status stays outside the quota', async () => {
     const limited = await createUser('limited4');
     process.env.AI_RATE_LIMIT = '1';
     try {
-      assert.equal((await call('GET', '/ai/status', undefined, limited)).status, 200);
-      const blocked = await call('POST', '/ai/draft-note', { memo: 'one request' }, limited);
+      for (let i = 0; i < 3; i += 1) assert.equal((await call('GET', '/ai/status', undefined, limited)).status, 200);
+      assert.equal((await call('POST', '/ai/draft-note', { memo: 'first request' }, limited)).status, 200);
+      const blocked = await call('POST', '/ai/draft-note', { memo: 'second request' }, limited);
       assert.equal(blocked.status, 429);
       assert.match(blocked.data.message, /AI 요청이 너무 많습니다/);
     } finally {

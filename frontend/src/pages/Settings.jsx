@@ -1,3 +1,6 @@
+import { PageHeader, Card } from '../components/ui';
+import { ShieldCheck, LockKeyhole, Download } from 'lucide-react';
+import '../styles/operations.css';
 import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import useAuthStore from '../store/useAuthStore';
@@ -132,16 +135,8 @@ export default function Settings() {
     }
   };
   return (
-    <div className="dashboard-content">
-      <div className="page-heading">
-        <div>
-          <p className="eyebrow">ACCOUNT & DATA</p>
-          <h1 className="page-title">계정 및 데이터</h1>
-          <p className="muted">
-            {user.name} · {user.email}
-          </p>
-        </div>
-      </div>
+    <div className="dashboard-content operations-page">
+      <PageHeader breadcrumbs={[{ label: '연구 공간', to: '/' }, { label: '계정 및 데이터' }]} title="계정 및 데이터" description={<>{user.name} · {user.email}</>} />
       {error && (
         <p className="error-banner" role="alert">
           {error}
@@ -153,8 +148,8 @@ export default function Settings() {
         </p>
       )}
       <div className="project-grid">
-        <section className="card mfa-card">
-          <h2>2단계 인증</h2>
+        <Card className="card mfa-card">
+          <h2><ShieldCheck aria-hidden="true" />2단계 인증</h2>
           <p className="muted">
             {mfaEnabled === null
               ? '인증 설정을 불러오는 중…'
@@ -254,9 +249,9 @@ export default function Settings() {
               </button>
             </form>
           )}
-        </section>
-        <section className="card">
-          <h2>비밀번호 변경</h2>
+        </Card>
+        <Card className="card">
+          <h2><LockKeyhole aria-hidden="true" />비밀번호 변경</h2>
           <p className="muted">변경 후 모든 기기에서 다시 로그인해야 합니다.</p>
           <form onSubmit={change} className="settings-form">
             <label>
@@ -298,9 +293,9 @@ export default function Settings() {
               비밀번호 변경
             </button>
           </form>
-        </section>
-        <section className="card">
-          <h2>연구 데이터 내보내기</h2>
+        </Card>
+        <Card className="card">
+          <h2><Download aria-hidden="true" />연구 데이터 내보내기</h2>
           <p className="project-description muted">
             현재 접근 가능한 연구노트, 버전 이력, 검토 기록, 첨부 메타데이터를 JSON 파일로
             보관합니다. 휴지통과 첨부 원본은 포함되지 않습니다.
@@ -319,7 +314,7 @@ export default function Settings() {
           <p className="muted">
             승인은 내부 검토 기록입니다. 별도 검증이나 규정 준수 인증을 의미하지 않습니다.
           </p>
-        </section>
+        </Card>
       </div>
     </div>
   );

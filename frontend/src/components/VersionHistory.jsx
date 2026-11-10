@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import Modal from './Modal';
 import { diffDocs, docToPlainText, noteDoc } from '../lib/noteFormat';
 import { api, errorMessage } from '../lib/api';
+import { ArrowRight } from 'lucide-react';
+import { Callout } from './ui';
 
 function blockText(block) {
   return block ? docToPlainText({ type: 'doc', content: [block] }).trim() : '';
@@ -36,10 +38,10 @@ export default function VersionHistory({ note, onClose, onRestored }) {
     <Modal title="버전 비교 및 복원" wide busy={busy} onClose={onClose}>
       <div className="modal-body version-history">
         {error && <p role="alert" className="error-banner">{error}</p>}
-        <p className="muted">변경 이력은 과거 상태를 표시하며, 복원은 새 버전을 만듭니다.</p>
+        <Callout tone="info">변경 이력은 과거 상태를 표시하며, 복원은 새 버전을 만듭니다.</Callout>
         <div className="version-list">{versions.map((version) => <button type="button" className={`version-item ${source?.version === version.version ? 'active' : ''}`} key={version.id || version._id || version.version} onClick={async () => { try { const { data } = await api.get(`/eln/${note.id}/versions/${version.version}`); setSource(data); } catch (e) { setError(errorMessage(e)); } }}><strong>v{version.version}</strong><span>{version.changeReason || '변경 사유 없음'}</span><small>{version.updaterName || ''} · {version.createdAt ? new Date(version.createdAt).toLocaleString() : ''}</small></button>)}</div>
         {source && <>
-          <h3>v{source.version} → 현재 v{note.version}</h3>
+          <h3 className="records-version-title">v{source.version} <ArrowRight aria-hidden="true" /> 현재 v{note.version}</h3>
           <div className="doc-diff">{diffs.map((diff, index) => {
             const oldText = blockText(oldDoc.content?.[diff.blockIndexA]);
             const newText = blockText(newDoc.content?.[diff.blockIndexB]);

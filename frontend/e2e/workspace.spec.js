@@ -366,6 +366,7 @@ test('Phase 2: protocol runs, block content, version restore, comments, search a
   await editDialog.locator('.ProseMirror[contenteditable="true"]').fill('변경된 측정 메모');
   await editDialog.getByLabel('수정 사유').fill('버전 비교용 변경');
   await editDialog.getByRole('button', { name: '서버에 저장' }).click();
+  await expect(editDialog).toBeHidden();
   await page.getByRole('button', { name: /E2E 프로토콜 실행 노트/ }).click();
   const currentNoteDialog = page.getByRole('dialog', { name: /연구노트/ });
   await currentNoteDialog.getByRole('button', { name: '변경 이력' }).click();
@@ -568,6 +569,7 @@ test('Phase 3: LOT usage, labels, equipment booking, API key and instrument inbo
   await expect(page.getByRole('alert')).toContainText(/예약|겹|중복|충돌|overlap|conflict/i);
 
   await page.getByRole('link', { name: 'API 키', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'API 키', level: 1 })).toBeVisible();
   const keyForm = page.locator('.phase3-page form').first();
   await keyForm.getByLabel('이름').fill('Phase 3 Inbox E2E key');
   await keyForm.getByLabel(/기기 수집함 업로드/).check();

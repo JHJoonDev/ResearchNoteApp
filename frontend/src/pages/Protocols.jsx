@@ -3,6 +3,9 @@ import useProjectStore from '../store/useProjectStore';
 import Modal from '../components/Modal';
 import { api, errorMessage } from '../lib/api';
 import AiStatusContext from '../contexts/AiStatusContext';
+import { Plus, ListChecks, Archive } from 'lucide-react';
+import { PageHeader, Card, StatusPill, EmptyState } from '../components/ui';
+import '../styles/records.css';
 
 const newStep = () => ({ id: crypto.randomUUID(), title: '', instructions: '', checklist: [], resultFields: [] });
 const newProtocol = () => ({ title: '', description: '', projectId: '', steps: [newStep()] });
@@ -132,31 +135,30 @@ export default function Protocols() {
   };
 
   return (
-    <div className="dashboard-content">
-      <div className="page-heading">
-        <div><p className="eyebrow">PROTOCOL LIBRARY</p><h1 className="page-title">프로토콜</h1><p className="muted">단계별 체크리스트와 결과 필드를 정의하고 버전을 발행합니다.</p></div>
-        <div className="button-row">
+    <div className="dashboard-content records-page">
+      <PageHeader breadcrumbs={[{ label: '연구 공간', to: '/' }, { label: '프로토콜' }]} title="프로토콜" description="단계별 체크리스트와 결과 필드를 정의하고 버전을 발행합니다." actions={<div className="button-row">
           {aiStatus.enabled && aiStatus.features.includes('generateProtocol') && <Suspense fallback={<span role="status">AI 프로토콜 도구를 불러오는 중…</span>}><AiProtocolGenerator onOpenDraft={openAiDraft} /></Suspense>}
-          <button className="btn-primary" onClick={() => setForm(newProtocol())}>＋ 새 프로토콜</button>
-        </div>
-      </div>
+          <button className="btn-primary" onClick={() => setForm(newProtocol())}><Plus aria-hidden="true" /> 새 프로토콜</button>
+        </div>} />
       {error && <p role="alert" className="error-banner">{error}</p>}
-      <div className="project-grid">
+      <Card title={`프로토콜 · ${items.length}`}>
+      {items.length > 0 && <div className="records-table-scroll"><table className="ui-table records-protocol-table"><thead><tr><th scope="col">프로토콜</th><th scope="col">상태</th><th scope="col">버전</th><th scope="col">작업</th></tr></thead><tbody>
         {items.map((item) => (
-          <article className="card protocol-card" key={item.id || item._id}>
-            <div className="card-header"><h2>{item.title}</h2><span className="status-pill">{item.status}</span></div>
-            <p>{item.description}</p>
-            <p className="muted">v{item.version} · {item.projectId ? projects.find((p) => p._id === item.projectId)?.name || '프로젝트' : '개인 프로토콜'} · {item.steps?.length || 0}단계</p>
+          <tr className="protocol-card" key={item.id || item._id}>
+            <td><div className="ui-cell-title records-title"><span className="records-icon-tile"><ListChecks aria-hidden="true" /></span><span><h2>{item.title}</h2><small>{item.description}</small><small>{item.projectId ? projects.find((p) => p._id === item.projectId)?.name || '프로젝트' : '개인 프로토콜'} · {item.steps?.length || 0}단계</small></span></div></td>
+            <td><StatusPill tone={item.status === 'published' ? 'success' : 'neutral'}>{item.status}</StatusPill></td>
+            <td className="records-mono">v{item.version}</td><td>
             <div className="button-row">
-              <button className="btn-outline" onClick={() => setForm({ ...item, id: item.id || item._id })}>편집</button>
+              <button className="btn-ghost" onClick={() => setForm({ ...item, id: item.id || item._id })}>편집</button>
               {item.status === 'draft' && <button className="btn-primary" disabled={busy} onClick={() => publish(item)}>발행</button>}
-              <button className="btn-outline" onClick={() => showVersions(item)}>버전</button>
-              <button className="btn-outline" disabled={busy} onClick={() => remove(item)}>보관</button>
+              <button className="btn-ghost" onClick={() => showVersions(item)}>버전</button>
+              <button className="btn-ghost" aria-label="보관" disabled={busy} onClick={() => remove(item)}><Archive aria-hidden="true" /></button>
             </div>
-          </article>
+          </td></tr>
         ))}
-        {!items.length && <section className="card empty-state">등록된 프로토콜이 없습니다.</section>}
-      </div>
+        </tbody></table></div>}
+        {!items.length && <EmptyState icon={<ListChecks />} title="등록된 프로토콜이 없습니다." />}
+      </Card>
       {form && (
         <Modal title={form.id ? '프로토콜 편집' : '새 프로토콜'} wide busy={busy} onClose={() => setForm(null)}>
           <form onSubmit={save}>
@@ -173,7 +175,7 @@ export default function Protocols() {
                   <label>결과 필드 (이름 | 단위 | text 또는 number)<textarea className="form-input" value={step.resultFields.map((field) => `${field.name}|${field.unit || ''}|${field.kind}`).join('\n')} onChange={(e) => setResultFields(index, e.target.value)} /></label>
                 </section>
               ))}
-              <button type="button" className="btn-outline" onClick={() => setForm({ ...form, steps: [...form.steps, newStep()] })}>＋ 단계 추가</button>
+              <button type="button" className="btn-outline" onClick={() => setForm({ ...form, steps: [...form.steps, newStep()] })}><Plus aria-hidden="true" /> 단계 추가</button>
             </div>
             <div className="modal-footer"><button className="btn-primary" disabled={busy}>{busy ? '저장 중…' : '저장'}</button></div>
           </form>

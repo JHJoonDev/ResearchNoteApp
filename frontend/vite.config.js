@@ -9,5 +9,5 @@ export default defineConfig(({ command }) => ({
   define:
     command === 'build' ? { 'import.meta.env.VITE_API_BASE_URL': JSON.stringify('/api') } : {},
   resolve: { dedupe: ['react', 'react-dom'] },
-  server: { host: '127.0.0.1', proxy: { '/api': 'http://127.0.0.1:5000' } },
+  server: { host: '127.0.0.1', proxy: { '/api/': 'http://127.0.0.1:5000' } },
 }));
