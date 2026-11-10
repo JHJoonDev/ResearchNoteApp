@@ -26,7 +26,7 @@ export default defineConfig({
     ...(!built
       ? [
           {
-            command: 'npm.cmd run dev -- --port 5173 --strictPort',
+            command: 'npm run dev -- --port 5173 --strictPort',
             url: 'http://127.0.0.1:5173',
             env: { VITE_API_BASE_URL: '/api' },
             reuseExistingServer: false,
