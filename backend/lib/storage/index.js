@@ -35,6 +35,17 @@ function localPath(key) {
 }
 
 export async function put(stream, meta = {}) {
+  try {
+    return await putStream(stream, meta);
+  } catch (error) {
+    // Release an unconsumed source so a later open/read error cannot surface as an uncaught exception.
+    stream.on?.('error', () => {});
+    stream.destroy?.();
+    throw error;
+  }
+}
+
+async function putStream(stream, meta) {
   const key = validKey(meta.key || `objects/${randomUUID()}`);
   if (provider() === 's3') {
     await new Upload({ client: s3(), params: { Bucket: process.env.S3_BUCKET, Key: key, Body: stream, ContentType: meta.contentType || 'application/octet-stream' }, leavePartsOnError: false }).done();
