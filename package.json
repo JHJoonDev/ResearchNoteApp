@@ -2,11 +2,14 @@
   "name": "labhub",
   "private": true,
   "scripts": {
-    "setup": "npm --prefix backend ci && npm --prefix frontend ci",
+    "setup:packages": "npm --prefix packages/note-format ci && npm --prefix packages/search-index ci && npm --prefix packages/label-kit ci && npm --prefix packages/ai-core ci && npm --prefix packages/note-editor ci",
+    "setup": "npm run setup:packages && npm --prefix backend ci && npm --prefix frontend ci",
     "build": "npm --prefix frontend run build",
     "start": "npm --prefix backend start",
     "test": "npm --prefix backend test && npm --prefix frontend run lint && npm --prefix frontend run build",
     "test:e2e": "npm --prefix frontend run test:e2e"
   },
-  "engines": { "node": ">=24" }
+  "engines": {
+    "node": ">=24"
+  }
 }
